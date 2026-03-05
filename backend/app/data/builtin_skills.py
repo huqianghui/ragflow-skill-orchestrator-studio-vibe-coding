@@ -4,8 +4,7 @@ BUILTIN_SKILLS: list[dict] = [
     {
         "name": "DocumentCracker",
         "description": (
-            "解析多种格式文档（PDF, DOCX, HTML, TXT, Markdown），"
-            "提取纯文本内容和元数据。"
+            "解析多种格式文档（PDF, DOCX, HTML, TXT, Markdown），提取纯文本内容和元数据。"
         ),
         "skill_type": "builtin",
         "is_builtin": True,
@@ -33,8 +32,7 @@ BUILTIN_SKILLS: list[dict] = [
     {
         "name": "TextSplitter",
         "description": (
-            "按策略分割长文本为较小的文本块，"
-            "支持固定大小、按句子、按段落等多种分块方式。"
+            "按策略分割长文本为较小的文本块，支持固定大小、按句子、按段落等多种分块方式。"
         ),
         "skill_type": "builtin",
         "is_builtin": True,
@@ -202,8 +200,7 @@ BUILTIN_SKILLS: list[dict] = [
     {
         "name": "PIIDetector",
         "description": (
-            "检测文本中的个人身份信息（PII），"
-            "支持脱敏处理，包括姓名、身份证号、电话、邮箱等。"
+            "检测文本中的个人身份信息（PII），支持脱敏处理，包括姓名、身份证号、电话、邮箱等。"
         ),
         "skill_type": "builtin",
         "is_builtin": True,
@@ -214,8 +211,13 @@ BUILTIN_SKILLS: list[dict] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "default": [
-                        "Name", "IDNumber", "PhoneNumber", "Email",
-                        "Address", "CreditCard", "BankAccount",
+                        "Name",
+                        "IDNumber",
+                        "PhoneNumber",
+                        "Email",
+                        "Address",
+                        "CreditCard",
+                        "BankAccount",
                     ],
                     "description": "要检测的 PII 类型",
                 },
@@ -224,8 +226,7 @@ BUILTIN_SKILLS: list[dict] = [
                     "enum": ["mask", "replace", "remove"],
                     "default": "mask",
                     "description": (
-                        "脱敏方式：mask（用 *** 替换）、"
-                        "replace（用标签替换）、remove（删除）"
+                        "脱敏方式：mask（用 *** 替换）、replace（用标签替换）、remove（删除）"
                     ),
                 },
                 "mask_char": {
@@ -315,8 +316,7 @@ BUILTIN_SKILLS: list[dict] = [
     {
         "name": "TextEmbedder",
         "description": (
-            "将文本转化为向量表示（embedding），"
-            "支持多种模型（OpenAI, Azure OpenAI, 本地模型等）。"
+            "将文本转化为向量表示（embedding），支持多种模型（OpenAI, Azure OpenAI, 本地模型等）。"
         ),
         "skill_type": "builtin",
         "is_builtin": True,
@@ -344,8 +344,7 @@ BUILTIN_SKILLS: list[dict] = [
     {
         "name": "Shaper",
         "description": (
-            "数据整形工具，用于重新组织、映射和转换字段结构，"
-            "将数据适配为下游节点期望的格式。"
+            "数据整形工具，用于重新组织、映射和转换字段结构，将数据适配为下游节点期望的格式。"
         ),
         "skill_type": "builtin",
         "is_builtin": True,
@@ -384,8 +383,12 @@ BUILTIN_SKILLS: list[dict] = [
                 "operator": {
                     "type": "string",
                     "enum": [
-                        "equals", "not_equals", "contains",
-                        "greater_than", "less_than", "regex_match",
+                        "equals",
+                        "not_equals",
+                        "contains",
+                        "greater_than",
+                        "less_than",
+                        "regex_match",
                     ],
                     "default": "equals",
                     "description": "比较运算符",

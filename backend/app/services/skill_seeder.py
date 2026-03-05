@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 async def seed_builtin_skills(db: AsyncSession) -> None:
     """Insert missing built-in skills. Idempotent — safe to call on every startup."""
-    result = await db.execute(
-        select(Skill.name).where(Skill.is_builtin.is_(True))
-    )
+    result = await db.execute(select(Skill.name).where(Skill.is_builtin.is_(True)))
     existing_names: set[str] = {row[0] for row in result.all()}
 
     to_insert = [
@@ -32,5 +30,6 @@ async def seed_builtin_skills(db: AsyncSession) -> None:
     await db.commit()
     logger.info(
         "Seeded %d built-in skills (total defined: %d).",
-        len(to_insert), len(BUILTIN_SKILLS),
+        len(to_insert),
+        len(BUILTIN_SKILLS),
     )

@@ -30,4 +30,7 @@ async def seed_builtin_skills(db: AsyncSession) -> None:
 
     db.add_all(to_insert)
     await db.commit()
-    logger.info("Seeded %d built-in skills (total defined: %d).", len(to_insert), len(BUILTIN_SKILLS))
+    logger.info(
+        "Seeded %d built-in skills (total defined: %d).",
+        len(to_insert), len(BUILTIN_SKILLS),
+    )

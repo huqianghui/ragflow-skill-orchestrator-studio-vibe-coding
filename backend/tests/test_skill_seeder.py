@@ -1,11 +1,9 @@
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.builtin_skills import BUILTIN_SKILLS
 from app.models.skill import Skill
 from app.services.skill_seeder import seed_builtin_skills
-
 from tests.conftest import TestSessionLocal
 
 

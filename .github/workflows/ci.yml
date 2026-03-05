@@ -111,7 +111,12 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
+            BACKEND_FQDN=$(az containerapp show \
+              --name skill-studio-backend \
+              --resource-group ${{ vars.RESOURCE_GROUP }} \
+              --query 'properties.configuration.ingress.fqdn' -o tsv)
             az containerapp update \
               --name skill-studio-frontend \
               --resource-group ${{ vars.RESOURCE_GROUP }} \
-              --image ${{ vars.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+              --image ${{ vars.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }} \
+              --set-env-vars "BACKEND_URL=https://${BACKEND_FQDN}"

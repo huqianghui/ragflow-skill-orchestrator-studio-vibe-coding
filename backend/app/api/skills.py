@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.skill import Skill
 from app.schemas.common import PaginatedResponse
 from app.schemas.skill import SkillCreate, SkillResponse, SkillUpdate
-from app.utils.exceptions import NotFoundException
+from app.utils.exceptions import AppException, NotFoundException
 from app.utils.pagination import paginate, pagination_params
 
 router = APIRouter(prefix="/skills", tags=["skills"])
@@ -55,6 +55,13 @@ async def update_skill(skill_id: str, body: SkillUpdate, db: AsyncSession = Depe
     if not skill:
         raise NotFoundException("Skill", skill_id)
 
+    if skill.is_builtin:
+        raise AppException(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Built-in skills cannot be modified",
+        )
+
     update_data = body.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(skill, key, value)
@@ -70,6 +77,13 @@ async def delete_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
     skill = result.scalar_one_or_none()
     if not skill:
         raise NotFoundException("Skill", skill_id)
+
+    if skill.is_builtin:
+        raise AppException(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Built-in skills cannot be deleted",
+        )
 
     await db.delete(skill)
     await db.commit()

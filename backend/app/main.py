@@ -7,8 +7,9 @@ from fastapi.responses import JSONResponse
 from app.api.health import router as health_router
 from app.api.router import api_router
 from app.config import get_settings
-from app.database import engine
+from app.database import AsyncSessionLocal, engine
 from app.models.base import Base
+from app.services.skill_seeder import seed_builtin_skills
 from app.utils.exceptions import AppException
 
 settings = get_settings()
@@ -19,6 +20,9 @@ async def lifespan(app: FastAPI):
     # Create tables on startup (dev convenience; use Alembic in production)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Seed built-in skills
+    async with AsyncSessionLocal() as session:
+        await seed_builtin_skills(session)
     yield
     await engine.dispose()
 

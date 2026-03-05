@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = "sqlite:///./data/app.db"
     api_prefix: str = "/api/v1"
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:15173"]
 
     model_config = ConfigDict(env_file=".env")
 ```
@@ -373,7 +373,7 @@ interface PaginatedResponse<T> {
 import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:18000/api/v1",
   timeout: 30000,
 });
 
@@ -401,25 +401,25 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "18000:18000"
     volumes:
       - ./backend/app:/app/app          # 热重载
       - ./backend/data:/app/data        # SQLite 数据文件持久化
     environment:
       - DEBUG=true
       - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "15173:15173"
     volumes:
       - ./frontend/src:/app/src         # 热重载
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_API_BASE_URL=http://localhost:18000/api/v1
     command: npm run dev -- --host 0.0.0.0
 ```
 

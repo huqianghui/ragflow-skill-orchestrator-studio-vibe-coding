@@ -13,19 +13,12 @@ tech_stack:
 
 specs:
   - skills/spec.md
+  - skill-library-ui/spec.md
   - pipelines/spec.md
   - datasources/spec.md
   - runs/spec.md
   - targets/spec.md
   - system/spec.md
-
-changes:
-  - init-project-foundation
-  - skill-management
-  - pipeline-orchestration
-  - datasource-and-execution
-  - output-targets
-  - react-frontend
 
 decisions:
   target_users: business developers

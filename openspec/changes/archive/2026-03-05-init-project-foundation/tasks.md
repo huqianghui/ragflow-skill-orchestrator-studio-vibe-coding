@@ -154,8 +154,8 @@
 - [x] 编写 `backend/Dockerfile`（基于 python:3.12-slim）
 - [x] 编写 `frontend/Dockerfile`（基于 node:20-slim，多阶段构建 + nginx）
 - [x] 编写 `docker-compose.yml`
-  - backend 服务：端口 8000，挂载代码目录实现热重载
-  - frontend 服务：端口 5173，挂载 src 目录实现热重载
+  - backend 服务：端口 18000，挂载代码目录实现热重载
+  - frontend 服务：端口 15173，挂载 src 目录实现热重载
 - [x] 添加 `.dockerignore` 文件（排除 node_modules, __pycache__, .venv 等）
 - [x] 编写 `frontend/nginx.conf`（SPA 路由 + API 反向代理）
 
@@ -232,8 +232,8 @@
 ## 验收标准
 
 1. ~~`docker-compose up` 成功启动前后端服务~~ ✅
-2. ~~`curl http://localhost:8000/health` 返回 `{"status": "ok"}`~~ ✅
-3. ~~浏览器访问 `http://localhost:5173` 可看到基础页面布局~~ ✅
+2. ~~`curl http://localhost:18000/health` 返回 `{"status": "ok"}`~~ ✅
+3. ~~浏览器访问 `http://localhost:15173` 可看到基础页面布局~~ ✅
 4. ~~`alembic upgrade head` 成功创建所有数据表~~ ✅
 5. ~~`pytest` 通过所有测试用例 (5/5)~~ ✅
 6. ~~`ruff check` 和 `ruff format --check` 无报错~~ ✅

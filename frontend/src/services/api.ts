@@ -25,7 +25,7 @@ apiClient.interceptors.response.use(
 
 // --- Skills ---
 export const skillsApi = {
-  list: (page = 1, pageSize = 20) =>
+  list: (page = 1, pageSize = 50) =>
     apiClient.get<PaginatedResponse<Skill>>('/skills', { params: { page, page_size: pageSize } }).then(r => r.data),
   get: (id: string) =>
     apiClient.get<Skill>(`/skills/${id}`).then(r => r.data),

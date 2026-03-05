@@ -78,12 +78,5 @@ async def delete_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
     if not skill:
         raise NotFoundException("Skill", skill_id)
 
-    if skill.is_builtin:
-        raise AppException(
-            status_code=403,
-            code="FORBIDDEN",
-            message="Built-in skills cannot be deleted",
-        )
-
     await db.delete(skill)
     await db.commit()

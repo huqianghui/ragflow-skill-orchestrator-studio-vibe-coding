@@ -6,7 +6,7 @@ from tests.conftest import TestSessionLocal
 
 
 @pytest.mark.asyncio
-async def test_delete_builtin_skill_returns_403(client: AsyncClient):
+async def test_delete_builtin_skill_returns_204(client: AsyncClient):
     # Seed built-in skills first
     async with TestSessionLocal() as db:
         await seed_builtin_skills(db)
@@ -17,10 +17,13 @@ async def test_delete_builtin_skill_returns_403(client: AsyncClient):
     items = response.json()["items"]
     builtin = next(s for s in items if s["is_builtin"])
 
-    # Try to delete
+    # Delete should succeed
     response = await client.delete(f"/api/v1/skills/{builtin['id']}")
-    assert response.status_code == 403
-    assert "cannot be deleted" in response.json()["message"]
+    assert response.status_code == 204
+
+    # Verify skill is gone
+    response = await client.get(f"/api/v1/skills/{builtin['id']}")
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

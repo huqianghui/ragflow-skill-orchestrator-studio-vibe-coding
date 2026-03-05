@@ -8,13 +8,13 @@
 ┌──────────────────────────────────────────────────────────┐
 │                    Frontend (React)                       │
 │  Ant Design + React Flow + TypeScript + Zustand           │
-│  Port: 5173 (dev) / 80 (prod nginx)                      │
+│  Port: 15173 (dev) / 80 (prod nginx)                     │
 └────────────────────┬─────────────────────────────────────┘
                      │ /api/v1/*
 ┌────────────────────▼─────────────────────────────────────┐
 │                   Backend (FastAPI)                        │
 │  SQLAlchemy 2.0 (async) + Pydantic v2 + Alembic           │
-│  Port: 8000                                               │
+│  Port: 18000                                              │
 └────────────────────┬─────────────────────────────────────┘
                      │
               ┌──────▼──────┐
@@ -64,9 +64,9 @@
 docker-compose up
 ```
 
-- 前端: http://localhost:5173
-- 后端 API: http://localhost:8000
-- Swagger 文档: http://localhost:8000/docs
+- 前端: http://localhost:15173
+- 后端 API: http://localhost:18000
+- Swagger 文档: http://localhost:18000/docs
 
 ### 方式二：本地开发
 
@@ -75,7 +75,7 @@ docker-compose up
 cd backend
 pip install -e ".[dev]"
 alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 18000
 ```
 
 **前端：**
@@ -235,7 +235,7 @@ frontend-test ─┘
 |------|--------|------|
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/app.db` | 数据库连接 |
 | `DEBUG` | `true` | 调试模式 |
-| `CORS_ORIGINS` | `["http://localhost:5173"]` | 允许的跨域来源 |
+| `CORS_ORIGINS` | `["http://localhost:15173"]` | 允许的跨域来源 |
 | `MAX_UPLOAD_SIZE_MB` | `100` | 最大上传文件大小 |
 | `SYNC_EXECUTION_TIMEOUT_S` | `300` | 同步执行超时 |
 | `CLEANUP_RETENTION_DAYS` | `7` | 中间结果保留天数 |

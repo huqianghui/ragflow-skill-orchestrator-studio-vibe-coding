@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = "sqlite+aiosqlite:///./data/app.db"
     api_prefix: str = "/api/v1"
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:15173"]
     max_upload_size_mb: int = 100
     sync_execution_timeout_s: int = 300
     cleanup_retention_days: int = 7

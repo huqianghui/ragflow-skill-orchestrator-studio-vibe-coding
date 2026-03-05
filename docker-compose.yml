@@ -4,25 +4,25 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "18000:18000"
     volumes:
       - ./backend/app:/app/app
       - ./backend/data:/app/data
     environment:
       - DEBUG=true
       - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 18000 --reload
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"
+      - "15173:15173"
     volumes:
       - ./frontend/src:/app/src
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_API_BASE_URL=http://localhost:18000/api/v1
     command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend

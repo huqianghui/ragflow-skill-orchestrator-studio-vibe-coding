@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+*.db
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+backend/.env
+
+# Cache
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Data (runtime generated)
+backend/data/
+
+# Build
+*.egg
+.claude/

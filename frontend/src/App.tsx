@@ -1,0 +1,39 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import AppLayout from './components/AppLayout';
+import Dashboard from './pages/Dashboard';
+import SkillLibrary from './pages/SkillLibrary';
+import Pipelines from './pages/Pipelines';
+import PipelineEditor from './pages/PipelineEditor';
+import DataSources from './pages/DataSources';
+import Targets from './pages/Targets';
+import RunHistory from './pages/RunHistory';
+import Settings from './pages/Settings';
+
+export default function App() {
+  return (
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#1677ff',
+          borderRadius: 6,
+        },
+      }}
+    >
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/skills" element={<SkillLibrary />} />
+            <Route path="/pipelines" element={<Pipelines />} />
+            <Route path="/pipelines/:id/edit" element={<PipelineEditor />} />
+            <Route path="/data-sources" element={<DataSources />} />
+            <Route path="/targets" element={<Targets />} />
+            <Route path="/runs" element={<RunHistory />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
+  );
+}

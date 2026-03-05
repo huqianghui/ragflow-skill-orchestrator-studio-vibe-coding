@@ -1,0 +1,51 @@
+project:
+  name: ragflow-skill-orchestrator-studio
+  description: >
+    A flexible Skill Orchestration Studio for building data ingestion pipelines,
+    inspired by Azure AI Search "Import Data" but with customizable skills,
+    visual pipeline construction, and rapid testing/debugging capabilities.
+  version: 0.1.0
+
+tech_stack:
+  backend: Python FastAPI
+  frontend: React
+  auth: none  # MVP single-user mode
+
+specs:
+  - skills/spec.md
+  - pipelines/spec.md
+  - datasources/spec.md
+  - runs/spec.md
+  - targets/spec.md
+  - system/spec.md
+
+changes:
+  - init-project-foundation
+  - skill-management
+  - pipeline-orchestration
+  - datasource-and-execution
+  - output-targets
+  - react-frontend
+
+decisions:
+  target_users: business developers
+  skill_model: Azure AI Skillset compatible
+  custom_skill_types:
+    - web_api
+    - config_template
+    - python_code_upload
+  skill_discovery: marketplace/library + pipeline templates
+  datasources:
+    - local_file_upload
+    - azure_blob_storage
+  output_phase1: azure_ai_search_index
+  output_phase2:
+    - mysql
+    - postgresql
+    - cosmosdb
+    - neo4j
+  execution_modes:
+    - sync   # small files
+    - async  # large batches
+  observability: per-step input/output + logs
+  intermediate_results: retain with view/delete/scheduled cleanup

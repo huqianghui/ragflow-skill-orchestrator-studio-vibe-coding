@@ -18,13 +18,15 @@ WHEN 系统加载内置 Skill 列表
 THEN 每个 Skill 应包含以下字段:
   - id (唯一标识)
   - name (显示名称)
-  - type (builtin | web_api | config_template | python_code)
+  - skill_type (builtin | web_api | config_template | python_code)
   - description (功能描述)
-  - input_schema (JSON Schema 定义输入)
-  - output_schema (JSON Schema 定义输出)
-  - config (类型相关的配置参数)
-  - version (版本号)
+  - config_schema (类型相关的配置参数的 JSON Schema)
+  - is_builtin (是否为内置 Skill)
   - created_at / updated_at (时间戳)
+  [Phase 2 计划字段]:
+  - input_schema (JSON Schema 定义输入, 暂未实现)
+  - output_schema (JSON Schema 定义输出, 暂未实现)
+  - version (版本号, 暂未实现)
 ```
 
 ---

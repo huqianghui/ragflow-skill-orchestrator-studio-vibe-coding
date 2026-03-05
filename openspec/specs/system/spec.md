@@ -14,14 +14,14 @@
 
 ```
 GIVEN 系统正常运行
-WHEN 访问 GET /api/health
+WHEN 访问 GET /health
 THEN 返回 200:
   {
-    "status": "healthy",
+    "status": "ok",
     "version": "0.1.0",
-    "uptime_seconds": 3600,
     "database": "connected",
-    "storage": "available"
+    "uptime_seconds": 3600,  // [Phase 2]
+    "storage": "available"   // [Phase 2]
   }
 ```
 
@@ -29,14 +29,14 @@ THEN 返回 200:
 
 ```
 GIVEN 数据库连接异常
-WHEN 访问 GET /api/health
+WHEN 访问 GET /health
 THEN 返回 503:
   {
     "status": "degraded",
     "version": "0.1.0",
     "database": "disconnected",
-    "storage": "available",
-    "errors": ["Database connection failed: timeout"]
+    "storage": "available",  // [Phase 2]
+    "errors": ["Database connection failed: timeout"]  // [Phase 2]
   }
 ```
 
@@ -86,7 +86,7 @@ THEN 返回当前生效的配置（敏感信息如 API Key 脱敏显示）
 GIVEN 管理员设置 CLEANUP_RETENTION_DAYS = 7
 WHEN 清理任务执行 (每日凌晨 2:00)
 THEN 系统扫描所有 Run:
-  - completed_at 超过 7 天
+  - finished_at 超过 7 天
   - 未被标记为 "保留"
 AND 删除这些 Run 的中间结果数据 (input_data, output_data)
 AND 保留 Run 元数据和 StepResult 摘要

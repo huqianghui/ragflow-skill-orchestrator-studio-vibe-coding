@@ -17,13 +17,15 @@ GIVEN 用户查看数据源详情
 THEN 数据源应包含以下字段:
   - id (唯一标识)
   - name (显示名称)
-  - type (local_upload | azure_blob)
+  - description (描述, 可选)
+  - source_type (local_upload | azure_blob)
   - status (active | inactive | error)
-  - config (类型相关配置)
+  - connection_config (类型相关配置)
+  - pipeline_id (关联 Pipeline, 可选)
   - file_count (文件数量)
   - total_size (总大小)
   - created_at / updated_at
-  - last_synced_at (最后同步时间, 仅 azure_blob)
+  - last_synced_at (最后同步时间, 仅 azure_blob) [Phase 2]
 ```
 
 ---

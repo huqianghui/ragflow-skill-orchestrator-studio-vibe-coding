@@ -21,12 +21,13 @@ THEN Run 应包含以下字段:
   - target_id (输出目标)
   - status (pending | running | completed | failed | cancelled)
   - mode (sync | async)
-  - started_at / completed_at
+  - started_at / finished_at
   - total_documents (总文档数)
   - processed_documents (已处理数)
   - failed_documents (失败数)
   - error_message (顶层错误, 如有)
-AND 每个 Run 包含多个 StepResult:
+  - metrics (运行指标, JSON, 可选)
+AND 每个 Run 包含多个 StepResult [Phase 2]:
   - id
   - run_id
   - node_id (Pipeline 节点)
@@ -35,7 +36,7 @@ AND 每个 Run 包含多个 StepResult:
   - input_data (步骤输入, JSON)
   - output_data (步骤输出, JSON)
   - error_message
-  - started_at / completed_at
+  - started_at / finished_at
   - duration_ms
 ```
 

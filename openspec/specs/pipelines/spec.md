@@ -18,11 +18,12 @@ THEN Pipeline 应包含以下字段:
   - id (唯一标识)
   - name (显示名称)
   - description (描述)
-  - nodes (有序节点列表)
-  - edges (节点间连接关系)
-  - status (draft | validated | running | completed | failed)
+  - graph_data (JSON 对象，包含 nodes 和 edges 两个子字段)
+    - graph_data.nodes (有序节点列表)
+    - graph_data.edges (节点间连接关系)
+  - status (draft | validated | active | archived)
   - created_at / updated_at
-  - last_run_at (最后执行时间)
+  - last_run_at (最后执行时间) [Phase 2]
 AND 每个 Node 包含:
   - id (节点唯一 ID)
   - skill_id (引用的 Skill)

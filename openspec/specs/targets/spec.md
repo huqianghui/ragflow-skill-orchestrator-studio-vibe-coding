@@ -17,12 +17,14 @@ GIVEN 用户查看 Target 详情
 THEN Target 应包含以下字段:
   - id (唯一标识)
   - name (显示名称)
-  - type (azure_ai_search | mysql | postgresql | cosmosdb | neo4j)
+  - description (描述, 可选)
+  - target_type (azure_ai_search | mysql | postgresql | cosmosdb | neo4j)
   - status (active | inactive | error)
   - connection_config (连接配置, 加密存储)
   - field_mappings (字段映射配置)
+  - pipeline_id (关联 Pipeline, 可选)
   - created_at / updated_at
-  - last_write_at (最后写入时间)
+  - last_write_at (最后写入时间) [Phase 2]
 ```
 
 ---

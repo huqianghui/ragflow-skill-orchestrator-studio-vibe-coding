@@ -24,7 +24,7 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 
 #### Scenario: Name 列点击行为
 
-- **WHEN** 点击 builtin skill 名称 → 打开 Detail Modal（只读）
+- **WHEN** 点击 builtin skill 名称 → 导航到 /skills/{id}/configure（BuiltinSkillEditor 页面）
 - **WHEN** 点击 python_code skill 名称 → 导航到 /skills/{id}/edit（SkillEditor 全页面）
 - **WHEN** 点击其他 custom skill 名称 → 打开 Edit Form Modal
 
@@ -36,8 +36,8 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 
 #### Scenario: Actions 列按钮
 
-- **THEN** 每行显示 View / Edit / Delete 按钮
-- **AND** builtin skill 的 Edit 按钮为 disabled
+- **THEN** 每行显示 View / Edit|Configure / Delete 按钮
+- **AND** builtin skill 显示 "Configure" 按钮，点击导航到 /skills/{id}/configure
 - **AND** python_code skill 的 Edit 点击导航到 /skills/{id}/edit
 
 ### Requirement: 表格排序 [Phase 1 - 已实现]
@@ -74,7 +74,8 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
   - KeyPhraseExtractor → HighlightOutlined, SentimentAnalyzer → SmileOutlined
   - PIIDetector → EyeInvisibleOutlined, TextTranslator → TranslationOutlined
   - OCR → ScanOutlined, ImageAnalyzer → PictureOutlined
-  - TextEmbedder → RobotOutlined, Shaper → FunctionOutlined, Conditional → ForkOutlined
+  - TextEmbedder → RobotOutlined, GenAIPrompt → OpenAIOutlined
+  - Shaper → FunctionOutlined, Conditional → ForkOutlined
 
 ### Requirement: Skill 详情 Modal [Phase 1 - 已实现]
 

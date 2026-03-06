@@ -20,6 +20,9 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
   - additional_requirements (文本, python_code 额外 pip 依赖, 可选)
   - test_input (JSON 对象, python_code 测试输入数据, 可选)
   - connection_mappings (JSON 对象, python_code 连接名→Connection ID 映射, 可选)
+  - required_resource_types (JSON 数组, builtin skill 所需连接类型, 可选)
+  - bound_connection_id (字符串, 用户绑定的 Connection ID, 可选)
+  - config_values (JSON 对象, 用户配置的参数值, 可选)
   - created_at / updated_at (时间戳, 自动生成)
 
 ### Requirement: Skill CRUD 操作 [Phase 1 - 已实现]
@@ -98,32 +101,34 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 
 ### Requirement: 内置 Skill 列表 [Phase 1 - 已实现]
 
-系统提供 15 个内置 Skill 覆盖常见数据处理场景。
+系统提供 16 个内置 Skill 覆盖常见数据处理场景，每个 Skill 有完整的 Python 执行实现。
 
 #### Scenario: 内置 Skill 清单
 
 - **GIVEN** 系统初始化完成
-- **THEN** 以下 15 个内置 Skill 可用:
+- **THEN** 以下 16 个内置 Skill 可用:
 
-| # | 名称 | 说明 |
-|---|------|------|
-| 1 | DocumentCracker | 解析 PDF/DOCX/HTML/TXT/Markdown，提取纯文本和元数据 |
-| 2 | TextSplitter | 按策略分割文本 (固定大小/句子/段落/递归) |
-| 3 | TextMerger | 合并多个文本片段为连续文档 |
-| 4 | LanguageDetector | 检测文本语言，返回 ISO 639-1 代码和置信度 |
-| 5 | EntityRecognizer | 提取命名实体 (人名/地名/组织/日期/数字) |
-| 6 | EntityLinker | 将实体链接到知识库条目 (Wikipedia 等) |
-| 7 | KeyPhraseExtractor | 提取关键短语和核心概念 |
-| 8 | SentimentAnalyzer | 情感分析 (正面/负面/中立) |
-| 9 | PIIDetector | 个人信息检测与脱敏 (姓名/身份证/电话/邮箱等) |
-| 10 | TextTranslator | 文本翻译，支持自动检测源语言 |
-| 11 | OCR | 图片/扫描文档光学字符识别 |
-| 12 | ImageAnalyzer | 图片内容分析、描述生成、标签提取 |
-| 13 | TextEmbedder | 文本向量化 (支持 OpenAI/Azure OpenAI/本地模型) |
-| 14 | Shaper | 数据整形，字段重映射和格式转换 |
-| 15 | Conditional | 条件路由，根据表达式决定数据流向 |
+| # | 名称 | 资源类型 | 说明 |
+|---|------|---------|------|
+| 1 | DocumentCracker | azure_content_understanding / azure_doc_intelligence | 解析文档，提取纯文本和元数据 |
+| 2 | TextSplitter | 无 (本地执行) | 按策略分割文本 (固定大小/句子/段落/递归) |
+| 3 | TextMerger | 无 (本地执行) | 合并多个文本片段为连续文档 |
+| 4 | LanguageDetector | azure_ai_foundry | 检测文本语言，返回 ISO 639-1 代码和置信度 |
+| 5 | EntityRecognizer | azure_ai_foundry | 提取命名实体 (人名/地名/组织/日期/数字) |
+| 6 | EntityLinker | azure_ai_foundry | 将实体链接到知识库条目 (Wikipedia 等) |
+| 7 | KeyPhraseExtractor | azure_ai_foundry | 提取关键短语和核心概念 |
+| 8 | SentimentAnalyzer | azure_ai_foundry | 情感分析 (正面/负面/中立) |
+| 9 | PIIDetector | azure_ai_foundry | 个人信息检测与脱敏 |
+| 10 | TextTranslator | azure_ai_foundry | 文本翻译，支持自动检测源语言 |
+| 11 | OCR | azure_ai_foundry | 图片/扫描文档光学字符识别 |
+| 12 | ImageAnalyzer | azure_ai_foundry | 图片内容分析、描述生成、标签提取 |
+| 13 | TextEmbedder | azure_openai | 文本向量化 |
+| 14 | GenAIPrompt | azure_openai | Azure OpenAI chat completion AI 处理 |
+| 15 | Shaper | 无 (本地执行) | 数据整形，字段重映射和格式转换 |
+| 16 | Conditional | 无 (本地执行) | 条件路由，根据表达式决定数据流向 |
 
 - **AND** 每个内置 Skill 包含详细的 config_schema (JSON Schema 格式)
+- **AND** 每个 Skill 声明 required_resource_types 用于自动绑定 Connection
 
 ### Requirement: Python Code Skill 执行 [Phase 1 - 已实现]
 

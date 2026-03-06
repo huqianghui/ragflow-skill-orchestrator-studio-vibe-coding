@@ -9,6 +9,10 @@ class SkillCreate(BaseModel):
     skill_type: str = Field(..., pattern=r"^(builtin|web_api|config_template|python_code)$")
     config_schema: dict = Field(default_factory=dict)
     is_builtin: bool = False
+    source_code: str | None = None
+    additional_requirements: str | None = None
+    test_input: dict | None = None
+    connection_mappings: dict | None = None
 
 
 class SkillUpdate(BaseModel):
@@ -18,6 +22,10 @@ class SkillUpdate(BaseModel):
         default=None, pattern=r"^(builtin|web_api|config_template|python_code)$"
     )
     config_schema: dict | None = None
+    source_code: str | None = None
+    additional_requirements: str | None = None
+    test_input: dict | None = None
+    connection_mappings: dict | None = None
 
 
 class SkillResponse(BaseModel):
@@ -27,6 +35,10 @@ class SkillResponse(BaseModel):
     skill_type: str
     config_schema: dict
     is_builtin: bool
+    source_code: str | None
+    additional_requirements: str | None
+    test_input: dict | None
+    connection_mappings: dict | None
     created_at: datetime
     updated_at: datetime
 

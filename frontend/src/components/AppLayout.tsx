@@ -1,4 +1,5 @@
 import {
+  ApiOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   ExperimentOutlined,
@@ -15,6 +16,7 @@ const { Sider, Header, Content } = Layout;
 const menuItems = [
   { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/skills', icon: <ExperimentOutlined />, label: 'Skill Library' },
+  { key: '/connections', icon: <ApiOutlined />, label: 'Connections' },
   { key: '/pipelines', icon: <NodeIndexOutlined />, label: 'Pipelines' },
   { key: '/data-sources', icon: <DatabaseOutlined />, label: 'Data Sources' },
   { key: '/targets', icon: <SendOutlined />, label: 'Targets' },

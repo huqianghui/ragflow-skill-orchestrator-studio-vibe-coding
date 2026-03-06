@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -8,10 +9,12 @@ from app.api.health import router as health_router
 from app.api.router import api_router
 from app.config import get_settings
 from app.database import AsyncSessionLocal, engine
-from app.models.base import Base
+from app.models import Base
 from app.services.skill_seeder import seed_builtin_skills
+from app.services.venv_manager import VenvManager
 from app.utils.exceptions import AppException
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -23,6 +26,12 @@ async def lifespan(app: FastAPI):
     # Seed built-in skills
     async with AsyncSessionLocal() as session:
         await seed_builtin_skills(session)
+    # Initialize base virtual environment for skill execution
+    try:
+        venv_mgr = VenvManager()
+        venv_mgr.ensure_base_env()
+    except Exception:
+        logger.warning("Failed to initialize base venv (non-fatal)", exc_info=True)
     yield
     await engine.dispose()
 

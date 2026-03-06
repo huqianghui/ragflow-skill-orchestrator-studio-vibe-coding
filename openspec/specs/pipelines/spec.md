@@ -2,154 +2,113 @@
 
 ## Purpose
 
-Pipeline 是 Skill 的编排容器，定义了数据从输入到输出的完整处理流程。用户可以可视化地构建 Pipeline，添加/排列 Skill 节点，配置节点间的数据映射，并从模板库快速创建。
+Pipeline 是 Skill 的编排容器，定义了数据从输入到输出的完整处理流程。用户可以创建 Pipeline、配置 DAG 图结构，并最终可视化地构建和执行。
 
 ### Requirement: Pipeline Data Model
 
-系统应维护完整的 Pipeline 数据模型。
+#### Scenario: Pipeline 字段结构
 
-#### Scenario: Pipeline 基本结构
+- **GIVEN** 数据库中存在一个 Pipeline 记录
+- **THEN** 包含以下字段:
+  - id (UUID v4 字符串主键)
+  - name (显示名称, 最长 255 字符)
+  - description (描述, 可选)
+  - status (draft | validated | active | archived, 默认 draft)
+  - graph_data (JSON 对象, 默认 {"nodes": [], "edges": []})
+  - created_at / updated_at (时间戳)
+  - [Phase 2]: last_run_at (最后执行时间)
 
-- **GIVEN** 用户查看 Pipeline 详情
-- **THEN** Pipeline 应包含以下字段:
-  - id (唯一标识)
-  - name (显示名称)
-  - description (描述)
-  - graph_data (JSON 对象，包含 nodes 和 edges 两个子字段)
-    - graph_data.nodes (有序节点列表)
-    - graph_data.edges (节点间连接关系)
-  - status (draft | validated | active | archived)
-  - created_at / updated_at
-  - last_run_at (最后执行时间) [Phase 2]
-- **AND** 每个 Node 包含:
-  - id (节点唯一 ID)
-  - skill_id (引用的 Skill)
-  - skill_version (Skill 版本)
-  - position (画布坐标 x, y)
-  - config_overrides (覆盖 Skill 默认配置)
-  - input_mappings (输入字段映射)
-  - output_mappings (输出字段映射)
-- **AND** 每个 Edge 包含:
-  - source_node_id
-  - source_output_field
-  - target_node_id
-  - target_input_field
+- **AND** graph_data 中 Node 结构 [Phase 2]:
+  - id, skill_id, skill_version, position {x, y}
+  - config_overrides, input_mappings, output_mappings
+- **AND** graph_data 中 Edge 结构 [Phase 2]:
+  - source_node_id, source_output_field, target_node_id, target_input_field
 
-### Requirement: Pipeline CRUD
+### Requirement: Pipeline CRUD [Phase 1 - 已实现]
 
-用户可以创建、读取、更新、删除 Pipeline。
+#### Scenario: 创建 Pipeline
 
-#### Scenario: 创建空白 Pipeline
+- **WHEN** POST /api/v1/pipelines，body 包含:
+  - name (必填)
+  - description (可选)
+  - graph_data (可选, 默认 {"nodes": [], "edges": []})
+- **THEN** 创建 Pipeline (status=draft) 并返回 201
 
-- **GIVEN** 用户点击 "新建 Pipeline"
-- **WHEN** 用户选择 "空白 Pipeline"
-- **THEN** 系统创建一个新 Pipeline，status 为 draft
-- **AND** 显示空白画布
+#### Scenario: 列出 Pipeline（分页）
 
-#### Scenario: 从模板创建 Pipeline
+- **WHEN** GET /api/v1/pipelines?page=1&page_size=20
+- **THEN** 返回分页响应，按 created_at 倒序排列
 
-- **GIVEN** 用户点击 "新建 Pipeline"
-- **WHEN** 用户选择一个 Pipeline 模板（如 "PDF 文档索引"）
-- **THEN** 系统根据模板预填节点和连接
-- **AND** 用户可以在此基础上修改
+#### Scenario: 获取 Pipeline 详情
 
-#### Scenario: 列出 Pipeline
+- **WHEN** GET /api/v1/pipelines/{id}
+- **THEN** 返回完整 Pipeline 对象
+- **AND** 若不存在返回 404 NOT_FOUND
 
-- **GIVEN** 用户访问 Pipeline 列表页
-- **WHEN** 页面加载
-- **THEN** 显示所有 Pipeline，含名称、状态、节点数、最后运行时间
-- **AND** 支持按状态筛选和名称搜索
+#### Scenario: 更新 Pipeline
+
+- **WHEN** PUT /api/v1/pipelines/{id}，body 含需更新的字段
+- **THEN** 支持更新 name / description / status / graph_data
 
 #### Scenario: 删除 Pipeline
 
-- **GIVEN** 一个 Pipeline 当前没有正在运行的任务
-- **WHEN** 用户点击删除并确认
-- **THEN** 系统删除 Pipeline 及其关联的运行历史
-- **AND** 不影响被引用的 Skill
-- **GIVEN** 一个 Pipeline 正在运行
-- **WHEN** 用户点击删除
-- **THEN** 系统提示 "请先停止运行中的任务"
-- **AND** 阻止删除
+- **WHEN** DELETE /api/v1/pipelines/{id}
+- **THEN** 删除并返回 204
 
-### Requirement: 节点管理
+### Requirement: 前端 Pipeline 列表页 [Phase 1 - 已实现]
 
-用户可以在 Pipeline 画布上添加、移除、连接 Skill 节点。
+#### Scenario: Pipeline 列表展示
+
+- **WHEN** 用户访问 /pipelines
+- **THEN** 显示表格: Name / Status (Tag) / Description / Created / Actions
+- **AND** 支持 "New Pipeline" 按钮
+- **AND** Actions: Edit / Run / Delete (占位, 待实现交互)
+
+### Requirement: Pipeline 编辑器 [Phase 1 - 占位]
+
+#### Scenario: Pipeline 编辑页
+
+- **WHEN** 用户访问 /pipelines/{id}/edit
+- **THEN** 显示 Pipeline ID 和画布占位区域
+- **AND** React Flow 画布将在 Phase 2 实现
+
+### Requirement: 节点管理与画布 [Phase 2]
 
 #### Scenario: 添加 Skill 节点
 
-- **GIVEN** 用户在 Pipeline 编辑页面
-- **WHEN** 从 Skill 面板拖拽一个 Skill 到画布
-- **THEN** 画布上创建一个新节点，显示 Skill 名称和图标
-- **AND** 节点显示输入/输出端口
+- **WHEN** 从 Skill 面板拖拽 Skill 到画布
+- **THEN** 创建新节点，显示 Skill 名称/图标/输入输出端口
 
-#### Scenario: 连接两个节点
+#### Scenario: 连接节点
 
-- **GIVEN** 画布上有两个节点 A 和 B
-- **WHEN** 用户从节点 A 的输出端口拖线到节点 B 的输入端口
-- **THEN** 创建一条 Edge 连接
-- **AND** 如果输出/输入类型不兼容，显示警告
+- **WHEN** 从节点 A 输出端口拖线到节点 B 输入端口
+- **THEN** 创建 Edge，类型不兼容时显示警告
 
 #### Scenario: 配置节点参数
 
-- **GIVEN** 用户点击画布上的一个节点
-- **WHEN** 节点配置面板打开
-- **THEN** 显示:
-  - Skill 名称和类型
-  - 可覆盖的配置参数
-  - 输入字段映射（从哪个上游节点/字段获取数据）
-  - 输出字段映射
+- **WHEN** 点击画布上的节点
+- **THEN** 显示配置面板: Skill 信息、可覆盖配置、字段映射
 
-#### Scenario: 删除节点
+### Requirement: Pipeline 模板库 [Phase 2]
 
-- **GIVEN** 用户选中一个节点
-- **WHEN** 用户按 Delete 键或点击删除按钮
-- **THEN** 移除该节点及所有关联的 Edge
+#### Scenario: 预置模板
 
-### Requirement: Pipeline 模板库
+- **THEN** 提供模板:
+  - PDF 文档索引: DocumentCracker → TextSplitter → TextEmbedder
+  - 多语言文档处理: DocumentCracker → LanguageDetector → TextTranslator → TextSplitter → TextEmbedder
+  - 实体提取与索引: DocumentCracker → TextSplitter → EntityRecognizer → KeyPhraseExtractor
+  - 图片分析索引: ImageAnalyzer → TextEmbedder
+  - PII 脱敏处理: DocumentCracker → PIIDetector → TextSplitter → TextEmbedder
 
-系统提供预置的 Pipeline 模板，覆盖常见数据处理场景。
-
-#### Scenario: 浏览模板库
-
-- **GIVEN** 用户打开 Pipeline 模板库
-- **WHEN** 页面加载
-- **THEN** 显示预置模板列表:
-  - "PDF 文档索引": DocumentCracker → TextSplitter → TextEmbedder
-  - "多语言文档处理": DocumentCracker → LanguageDetector → TextTranslator → TextSplitter → TextEmbedder
-  - "实体提取与索引": DocumentCracker → TextSplitter → EntityRecognizer → KeyPhraseExtractor
-  - "图片分析索引": ImageAnalyzer → TextEmbedder
-  - "PII 脱敏处理": DocumentCracker → PII Redactor → TextSplitter → TextEmbedder
-- **AND** 每个模板显示描述、包含的 Skill、预览图
-
-### Requirement: Pipeline 验证
-
-系统应在执行前验证 Pipeline 的完整性和正确性。
+### Requirement: Pipeline 验证 [Phase 2]
 
 #### Scenario: 验证通过
 
-- **GIVEN** 一个 Pipeline 包含至少一个节点
-- **AND** 所有节点的输入都已连接或有默认值
-- **AND** 没有循环依赖
+- **GIVEN** Pipeline 含至少一个节点，所有输入已连接，无循环
 - **WHEN** 用户点击 "验证"
-- **THEN** 系统标记 Pipeline 状态为 validated
-- **AND** 显示 "验证通过"
+- **THEN** 标记 status=validated
 
-#### Scenario: 验证失败 - 孤立节点
+#### Scenario: 验证失败
 
-- **GIVEN** 一个 Pipeline 中有节点的必需输入未连接
-- **WHEN** 用户点击 "验证"
-- **THEN** 系统标记失败节点为红色
-- **AND** 显示错误: "节点 [name] 的输入 [field] 未连接"
-
-#### Scenario: 验证失败 - 循环依赖
-
-- **GIVEN** 一个 Pipeline 中存在 A → B → C → A 的循环
-- **WHEN** 用户点击 "验证"
-- **THEN** 系统显示错误: "检测到循环依赖: A → B → C → A"
-- **AND** 高亮循环路径
-
-#### Scenario: 验证失败 - 类型不匹配
-
-- **GIVEN** 节点 A 的输出类型为 "image" 连接到节点 B 期望 "text" 的输入
-- **WHEN** 用户点击 "验证"
-- **THEN** 系统显示警告: "节点 A 输出类型 'image' 与节点 B 输入类型 'text' 不匹配"
+- **THEN** 检测: 孤立节点（必需输入未连接）、循环依赖、类型不匹配
+- **AND** 高亮失败节点/路径，显示错误信息

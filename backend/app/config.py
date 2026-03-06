@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     sync_execution_timeout_s: int = 300
     cleanup_retention_days: int = 7
     log_level: str = "INFO"
+    # Fernet key for encrypting connection secrets
+    secret_encryption_key: str = "VTpw28GEqsSisV5yam23f1krl5oMvygG8iDHB4wUDho="
+    # Root path for skill virtual environments
+    skill_venvs_root: str = "./data/skill_venvs"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

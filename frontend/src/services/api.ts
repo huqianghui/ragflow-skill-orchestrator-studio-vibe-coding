@@ -1,10 +1,14 @@
 import axios from 'axios';
 import type {
+  Connection,
+  ConnectionTestResult,
   DataSource,
   PaginatedResponse,
   Pipeline,
+  PreloadedImports,
   Run,
   Skill,
+  SkillTestResult,
   Target,
 } from '../types';
 
@@ -35,6 +39,28 @@ export const skillsApi = {
     apiClient.put<Skill>(`/skills/${id}`, data).then(r => r.data),
   delete: (id: string) =>
     apiClient.delete(`/skills/${id}`),
+  getPreloadedImports: () =>
+    apiClient.get<PreloadedImports>('/skills/preloaded-imports').then(r => r.data),
+  test: (id: string, testInput: Record<string, unknown>) =>
+    apiClient.post<SkillTestResult>(`/skills/${id}/test`, { test_input: testInput }).then(r => r.data),
+  testCode: (data: { source_code: string; connection_mappings?: Record<string, string> | null; test_input: Record<string, unknown> }) =>
+    apiClient.post<SkillTestResult>('/skills/test-code', data).then(r => r.data),
+};
+
+// --- Connections ---
+export const connectionsApi = {
+  list: (page = 1, pageSize = 50) =>
+    apiClient.get<PaginatedResponse<Connection>>('/connections', { params: { page, page_size: pageSize } }).then(r => r.data),
+  get: (id: string) =>
+    apiClient.get<Connection>(`/connections/${id}`).then(r => r.data),
+  create: (data: Partial<Connection>) =>
+    apiClient.post<Connection>('/connections', data).then(r => r.data),
+  update: (id: string, data: Partial<Connection>) =>
+    apiClient.put<Connection>(`/connections/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    apiClient.delete(`/connections/${id}`),
+  test: (id: string) =>
+    apiClient.post<ConnectionTestResult>(`/connections/${id}/test`).then(r => r.data),
 };
 
 // --- Pipelines ---

@@ -3,6 +3,8 @@ import { ConfigProvider } from 'antd';
 import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import SkillLibrary from './pages/SkillLibrary';
+import SkillEditor from './pages/SkillEditor';
+import Connections from './pages/Connections';
 import Pipelines from './pages/Pipelines';
 import PipelineEditor from './pages/PipelineEditor';
 import DataSources from './pages/DataSources';
@@ -25,6 +27,9 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/skills" element={<SkillLibrary />} />
+            <Route path="/skills/new" element={<SkillEditor />} />
+            <Route path="/skills/:id/edit" element={<SkillEditor />} />
+            <Route path="/connections" element={<Connections />} />
             <Route path="/pipelines" element={<Pipelines />} />
             <Route path="/pipelines/:id/edit" element={<PipelineEditor />} />
             <Route path="/data-sources" element={<DataSources />} />

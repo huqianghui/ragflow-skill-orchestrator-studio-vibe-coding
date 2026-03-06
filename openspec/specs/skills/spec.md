@@ -6,113 +6,114 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 
 ### Requirement: Skill Data Model
 
-系统应维护一个完整的 Skill 数据模型，包含名称、类型、输入/输出 schema、配置参数。
+#### Scenario: Skill 字段结构
 
-#### Scenario: 创建一个内置 Skill
-
-- **GIVEN** 用户访问 Skill 管理页面
-- **WHEN** 系统加载内置 Skill 列表
-- **THEN** 每个 Skill 应包含以下字段:
-  - id (唯一标识)
-  - name (显示名称)
+- **GIVEN** 数据库中存在一个 Skill 记录
+- **THEN** 该 Skill 包含以下字段:
+  - id (UUID v4 字符串主键)
+  - name (显示名称, 最长 255 字符)
   - skill_type (builtin | web_api | config_template | python_code)
-  - description (功能描述)
-  - config_schema (类型相关的配置参数的 JSON Schema)
-  - is_builtin (是否为内置 Skill)
-  - created_at / updated_at (时间戳)
+  - description (功能描述, 可选)
+  - config_schema (JSON 对象, 类型相关的配置参数 JSON Schema)
+  - is_builtin (布尔值, 是否为内置 Skill)
+  - created_at / updated_at (时间戳, 自动生成)
   - [Phase 2 计划字段]:
-  - input_schema (JSON Schema 定义输入, 暂未实现)
-  - output_schema (JSON Schema 定义输出, 暂未实现)
-  - version (版本号, 暂未实现)
+    - input_schema (JSON Schema 定义输入)
+    - output_schema (JSON Schema 定义输出)
+    - version (版本号)
 
 ### Requirement: Skill CRUD 操作
 
-用户可以创建、读取、更新、删除自定义 Skill。
+用户可以创建、读取、更新、删除 Skill。内置 Skill 不可更新。
 
-#### Scenario: 创建 Web API 类型 Skill
+#### Scenario: 创建自定义 Skill
 
-- **GIVEN** 用户在 Skill 管理页面点击 "新建 Skill"
-- **WHEN** 用户选择类型为 "Web API" 并填写:
-  - name: "Custom Entity Extractor"
-  - endpoint_url: "https://my-api.example.com/extract"
-  - http_method: POST
-  - headers: {"Authorization": "Bearer xxx"}
-  - input_schema: {"text": "string"}
-  - output_schema: {"entities": "array"}
-- **THEN** 系统保存 Skill 并返回新建的 Skill 详情
-- **AND** Skill 出现在 Skill 库列表中
+- **WHEN** POST /api/v1/skills，body 包含:
+  - name (必填)
+  - skill_type (必填, web_api | config_template | python_code)
+  - description (可选)
+  - config_schema (可选, 默认 {})
+- **THEN** 系统创建 Skill 并返回 201 + 完整 Skill 对象
 
-#### Scenario: 创建配置模板类型 Skill
+#### Scenario: 列出所有 Skill（分页）
 
-- **GIVEN** 用户在 Skill 管理页面点击 "新建 Skill"
-- **WHEN** 用户选择类型为 "配置模板" 并填写:
-  - name: "Text Splitter"
-  - template_type: "text_split"
-  - config: {"chunk_size": 1000, "overlap": 200, "separator": "\n\n"}
-- **THEN** 系统根据模板类型验证配置参数
-- **AND** 保存 Skill 并返回详情
-
-#### Scenario: 创建 Python 代码上传类型 Skill
-
-- **GIVEN** 用户在 Skill 管理页面点击 "新建 Skill"
-- **WHEN** 用户选择类型为 "Python 代码" 并上传:
-  - name: "Custom Transformer"
-  - code_file: transform.py (包含 def execute(input_data) -> output_data)
-  - requirements: ["numpy==1.24.0"]
-- **THEN** 系统验证代码文件包含 execute 函数签名
-- **AND** 安装依赖并保存 Skill
-
-#### Scenario: 列出所有 Skill
-
-- **GIVEN** 用户访问 Skill 库
 - **WHEN** GET /api/v1/skills?page=1&page_size=10
-- **THEN** 系统返回所有 Skill 列表（含内置和自定义）
-- **AND** 支持按类型、名称筛选
-- **AND** 支持分页，默认每页 10 条，分页选项为 [10, 20, 50, 100]
+- **THEN** 返回分页响应，含 items / total / page / page_size / total_pages
+- **AND** 按 created_at 倒序排列
 
-#### Scenario: 更新 Skill
+#### Scenario: 获取 Skill 详情
 
-- **GIVEN** 一个已存在的自定义 Skill
-- **WHEN** 用户修改其配置参数并保存
-- **THEN** 系统更新 Skill 并递增版本号
-- **AND** 已使用该 Skill 的 Pipeline 不受影响（引用旧版本）
+- **WHEN** GET /api/v1/skills/{id}
+- **THEN** 返回完整 Skill 对象
+- **AND** 若不存在返回 404 NOT_FOUND
 
-#### Scenario: 删除自定义 Skill
+#### Scenario: 更新自定义 Skill
 
-- **GIVEN** 一个自定义 Skill
-- **WHEN** DELETE 请求发送到 /api/v1/skills/{id}
-- **THEN** 系统删除该 Skill 并返回 204 响应
+- **GIVEN** 一个 is_builtin=false 的 Skill
+- **WHEN** PUT /api/v1/skills/{id}，body 含需更新的字段
+- **THEN** 系统更新并返回更新后的 Skill 对象
+
+#### Scenario: 更新内置 Skill 被拒绝
+
+- **GIVEN** 一个 is_builtin=true 的 Skill
+- **WHEN** PUT /api/v1/skills/{id}
+- **THEN** 返回 403 FORBIDDEN "Built-in skills cannot be modified"
+
+#### Scenario: 删除 Skill
+
+- **WHEN** DELETE /api/v1/skills/{id}
+- **THEN** 系统删除该 Skill 并返回 204
+- **AND** 若不存在返回 404 NOT_FOUND
 
 #### Scenario: 删除内置 Skill
 
-- **GIVEN** 一个内置 Skill
-- **WHEN** DELETE 请求发送到 /api/v1/skills/{id}
-- **THEN** 系统删除该 Skill 并返回 204 响应
+- **GIVEN** 一个 is_builtin=true 的 Skill
+- **WHEN** DELETE /api/v1/skills/{id}
+- **THEN** 系统删除该 Skill 并返回 204
 - **AND** skill_seeder 会在应用重启时重新创建缺失的内置 Skill
 
-### Requirement: Skill 库 / 市场
+### Requirement: 内置 Skill 自动播种
 
-系统提供一个 Skill 库，用户可以浏览、搜索、使用内置和社区 Skill。
+系统启动时自动补齐缺失的内置 Skill，幂等操作。
 
-#### Scenario: 浏览 Skill 库
+#### Scenario: 系统启动时播种内置 Skill
 
-- **GIVEN** 用户打开 Skill 库
-- **WHEN** 页面加载
-- **THEN** 显示 Skill 分类列表:
-  - 文本处理 (Text Processing)
-  - 实体识别 (Entity Recognition)
-  - 文档解析 (Document Parsing)
-  - 向量化 (Embedding)
-  - 自定义 (Custom)
-- **AND** 每个 Skill 卡片显示名称、描述、类型、使用次数
+- **GIVEN** 系统启动
+- **WHEN** lifespan 初始化执行 seed_builtin_skills
+- **THEN** 比对数据库中已有的 builtin Skill name 集合
+- **AND** 仅插入缺失的内置 Skill，不更新已存在的
+- **AND** 记录日志: "Seeded N built-in skills"
 
-#### Scenario: 搜索 Skill
+### Requirement: 内置 Skill 列表
 
-- **GIVEN** 用户在 Skill 库搜索框输入关键词
-- **WHEN** 输入 "text split"
-- **THEN** 系统返回名称或描述匹配的 Skill 列表
+系统提供 15 个内置 Skill 覆盖常见数据处理场景。
 
-### Requirement: Skill 执行引擎
+#### Scenario: 内置 Skill 清单
+
+- **GIVEN** 系统初始化完成
+- **THEN** 以下 15 个内置 Skill 可用:
+
+| # | 名称 | 说明 |
+|---|------|------|
+| 1 | DocumentCracker | 解析 PDF/DOCX/HTML/TXT/Markdown，提取纯文本和元数据 |
+| 2 | TextSplitter | 按策略分割文本 (固定大小/句子/段落/递归) |
+| 3 | TextMerger | 合并多个文本片段为连续文档 |
+| 4 | LanguageDetector | 检测文本语言，返回 ISO 639-1 代码和置信度 |
+| 5 | EntityRecognizer | 提取命名实体 (人名/地名/组织/日期/数字) |
+| 6 | EntityLinker | 将实体链接到知识库条目 (Wikipedia 等) |
+| 7 | KeyPhraseExtractor | 提取关键短语和核心概念 |
+| 8 | SentimentAnalyzer | 情感分析 (正面/负面/中立) |
+| 9 | PIIDetector | 个人信息检测与脱敏 (姓名/身份证/电话/邮箱等) |
+| 10 | TextTranslator | 文本翻译，支持自动检测源语言 |
+| 11 | OCR | 图片/扫描文档光学字符识别 |
+| 12 | ImageAnalyzer | 图片内容分析、描述生成、标签提取 |
+| 13 | TextEmbedder | 文本向量化 (支持 OpenAI/Azure OpenAI/本地模型) |
+| 14 | Shaper | 数据整形，字段重映射和格式转换 |
+| 15 | Conditional | 条件路由，根据表达式决定数据流向 |
+
+- **AND** 每个内置 Skill 包含详细的 config_schema (JSON Schema 格式)
+
+### Requirement: Skill 执行引擎 [Phase 2]
 
 系统可以执行不同类型的 Skill，处理输入数据并产出输出数据。
 
@@ -120,45 +121,31 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 
 - **GIVEN** 一个 Web API 类型的 Skill 配置了 endpoint
 - **WHEN** Pipeline 执行到该 Skill 节点
-- **THEN** 系统将输入数据按 input_schema 格式化
-- **AND** 发送 HTTP 请求到 endpoint_url
-- **AND** 解析响应为 output_schema 格式
-- **AND** 如果请求失败，记录错误并标记步骤失败
+- **THEN** 发送 HTTP 请求到 endpoint_url，解析响应
+- **AND** 请求失败时记录错误并标记步骤失败
 
 #### Scenario: 执行配置模板 Skill
 
 - **GIVEN** 一个配置模板类型的 Skill
 - **WHEN** Pipeline 执行到该 Skill 节点
-- **THEN** 系统加载对应模板引擎
-- **AND** 使用配置参数执行内置处理逻辑
-- **AND** 返回处理结果
+- **THEN** 加载对应模板引擎，使用配置参数执行内置处理逻辑
 
 #### Scenario: 执行 Python 代码 Skill
 
 - **GIVEN** 一个 Python 代码类型的 Skill
 - **WHEN** Pipeline 执行到该 Skill 节点
-- **THEN** 系统在隔离环境中加载代码
-- **AND** 调用 execute(input_data) 函数
-- **AND** 捕获返回值作为输出
-- **AND** 捕获异常并记录到日志
+- **THEN** 在隔离环境中调用 execute(input_data)
 - **AND** 执行超时 (默认 60s) 后强制终止
 
-### Requirement: 内置 Skill 列表
+### Requirement: Skill 库浏览与搜索 [Phase 2]
 
-系统应提供一组内置 Skill 覆盖常见数据处理场景。
+#### Scenario: Skill 分类浏览
 
-#### Scenario: 系统初始化时加载内置 Skill
+- **GIVEN** 用户打开 Skill 库
+- **THEN** 显示分类: 文本处理、实体识别、文档解析、向量化、自定义
+- **AND** 每个 Skill 显示名称、描述、类型
 
-- **GIVEN** 系统首次启动
-- **WHEN** 初始化完成
-- **THEN** 以下内置 Skill 可用:
-  - DocumentCracker: 解析 PDF/DOCX/TXT/HTML 提取纯文本
-  - TextSplitter: 按策略分割文本 (固定大小/句子/段落)
-  - LanguageDetector: 检测文本语言
-  - EntityRecognizer: 提取命名实体
-  - KeyPhraseExtractor: 提取关键短语
-  - TextEmbedder: 生成文本向量 (支持多种模型)
-  - ImageAnalyzer: 图片 OCR + 描述
-  - TextTranslator: 文本翻译
-  - SentimentAnalyzer: 情感分析
-  - PII Redactor: 个人信息脱敏
+#### Scenario: Skill 搜索
+
+- **WHEN** 用户搜索关键词
+- **THEN** 返回名称或描述匹配的 Skill 列表

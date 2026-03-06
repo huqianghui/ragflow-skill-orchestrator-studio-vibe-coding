@@ -2,126 +2,92 @@
 
 ## Purpose
 
-数据源模块负责管理 Pipeline 的输入数据来源。Phase 1 支持本地文件上传和 Azure Blob Storage 两种数据源，支持多种文件格式。
+数据源模块负责管理 Pipeline 的输入数据来源。支持本地文件上传和 Azure Blob Storage 两种类型。
 
 ### Requirement: 数据源 Data Model
 
-系统应维护数据源配置的完整数据模型。
+#### Scenario: 数据源字段结构
 
-#### Scenario: 数据源基本结构
-
-- **GIVEN** 用户查看数据源详情
-- **THEN** 数据源应包含以下字段:
-  - id (唯一标识)
-  - name (显示名称)
+- **GIVEN** 数据库中存在一个 DataSource 记录
+- **THEN** 包含以下字段:
+  - id (UUID v4 字符串主键)
+  - name (显示名称, 最长 255 字符)
   - description (描述, 可选)
   - source_type (local_upload | azure_blob)
-  - status (active | inactive | error)
-  - connection_config (类型相关配置)
-  - pipeline_id (关联 Pipeline, 可选)
-  - file_count (文件数量)
-  - total_size (总大小)
-  - created_at / updated_at
-  - last_synced_at (最后同步时间, 仅 azure_blob) [Phase 2]
+  - connection_config (JSON 对象, 类型相关配置)
+  - status (active | inactive | error, 默认 active)
+  - file_count (文件数量, 默认 0)
+  - total_size (总大小 bytes, 默认 0)
+  - pipeline_id (关联 Pipeline, 可选, 外键 pipelines.id)
+  - created_at / updated_at (时间戳)
+  - [Phase 2]: last_synced_at (最后同步时间, 仅 azure_blob)
 
-### Requirement: 本地文件上传
+### Requirement: 数据源 CRUD [Phase 1 - 已实现]
 
-用户可以上传本地文件作为 Pipeline 数据源。
+#### Scenario: 创建数据源
 
-#### Scenario: 上传单个文件
+- **WHEN** POST /api/v1/data-sources，body 包含:
+  - name (必填)
+  - source_type (必填, local_upload | azure_blob)
+  - description (可选)
+  - connection_config (可选, 默认 {})
+  - pipeline_id (可选)
+- **THEN** 创建数据源并返回 201
 
-- **GIVEN** 用户在数据源页面点击 "上传文件"
-- **WHEN** 用户选择一个 PDF 文件 (< 100MB)
-- **THEN** 系统上传文件到服务端存储
-- **AND** 显示上传进度
-- **AND** 上传完成后文件出现在数据源文件列表中
+#### Scenario: 列出数据源（分页）
 
-#### Scenario: 批量上传文件
+- **WHEN** GET /api/v1/data-sources?page=1&page_size=20
+- **THEN** 返回分页响应，按 created_at 倒序排列
 
-- **GIVEN** 用户在数据源页面点击 "上传文件"
-- **WHEN** 用户选择多个文件或拖拽文件夹
-- **THEN** 系统并行上传所有文件
-- **AND** 显示每个文件的上传进度
-- **AND** 跳过不支持的文件格式并提示
+#### Scenario: 获取数据源详情
 
-#### Scenario: 支持的文件格式
+- **WHEN** GET /api/v1/data-sources/{id}
+- **THEN** 返回完整数据源对象
+- **AND** 若不存在返回 404 NOT_FOUND
 
-- **GIVEN** 用户上传文件
-- **WHEN** 文件格式为以下之一:
-  - PDF (.pdf)
-  - Word (.docx, .doc)
-  - 纯文本 (.txt, .md, .csv)
-  - HTML (.html, .htm)
-  - 图片 (.png, .jpg, .jpeg, .tiff)
-  - JSON (.json, .jsonl)
-  - Excel (.xlsx, .xls)
-- **THEN** 系统接受上传
-- **WHEN** 文件格式不在支持列表中
-- **THEN** 系统拒绝上传并提示 "不支持的文件格式: [ext]"
+#### Scenario: 更新数据源
 
-#### Scenario: 文件大小限制
-
-- **GIVEN** 用户上传文件
-- **WHEN** 单个文件超过 100MB
-- **THEN** 系统拒绝上传并提示 "文件大小超过限制 (最大 100MB)"
-
-### Requirement: Azure Blob Storage 数据源
-
-用户可以配置 Azure Blob Storage 作为数据源。
-
-#### Scenario: 配置 Azure Blob 连接
-
-- **GIVEN** 用户选择新建 Azure Blob 数据源
-- **WHEN** 用户填写:
-  - connection_string 或 account_name + account_key
-  - container_name
-  - prefix (可选, 用于过滤路径)
-- **THEN** 系统验证连接有效性
-- **AND** 列出 container 中匹配的文件
-- **AND** 保存数据源配置
-
-#### Scenario: 连接验证失败
-
-- **GIVEN** 用户填写了 Azure Blob 配置
-- **WHEN** connection_string 无效或无权限
-- **THEN** 系统显示 "连接失败: [错误详情]"
-- **AND** 不保存数据源
-
-#### Scenario: 同步文件列表
-
-- **GIVEN** 一个已配置的 Azure Blob 数据源
-- **WHEN** 用户点击 "同步" 或系统自动同步
-- **THEN** 系统扫描 container 中的文件
-- **AND** 更新文件列表（新增/删除）
-- **AND** 更新 last_synced_at 时间戳
-
-### Requirement: 数据源 CRUD
-
-用户可以管理数据源的完整生命周期。
-
-#### Scenario: 列出数据源
-
-- **GIVEN** 用户访问数据源页面
-- **WHEN** 页面加载
-- **THEN** 显示所有数据源，含名称、类型、文件数、状态
+- **WHEN** PUT /api/v1/data-sources/{id}
+- **THEN** 支持更新 name / description / connection_config / status / pipeline_id
 
 #### Scenario: 删除数据源
 
-- **GIVEN** 一个数据源未被任何运行中的 Pipeline 使用
-- **WHEN** 用户点击删除并确认
-- **THEN** 系统删除数据源配置
-- **AND** 对于本地上传，同时删除已上传的文件
-- **GIVEN** 一个数据源正被运行中的 Pipeline 使用
-- **WHEN** 用户点击删除
-- **THEN** 系统阻止删除并提示
+- **WHEN** DELETE /api/v1/data-sources/{id}
+- **THEN** 删除并返回 204
 
-#### Scenario: 浏览数据源文件
+### Requirement: 前端数据源页面 [Phase 1 - 已实现]
 
-- **GIVEN** 一个数据源包含文件
-- **WHEN** 用户点击进入数据源详情
-- **THEN** 显示文件列表:
-  - 文件名
-  - 大小
-  - 格式
-  - 上传/同步时间
-- **AND** 支持预览文本类文件的前 1000 字符
+#### Scenario: 数据源列表展示
+
+- **WHEN** 用户访问 /data-sources
+- **THEN** 显示表格: Name / Type (Tag) / Status (Tag, 颜色: active=green, inactive=default, error=red) / Files / Actions
+- **AND** 支持 "New Data Source" 按钮 (占位)
+- **AND** Actions: Manage (占位)
+
+### Requirement: 本地文件上传 [Phase 2]
+
+#### Scenario: 上传文件
+
+- **WHEN** 用户选择文件上传
+- **THEN** 显示上传进度，完成后文件出现在文件列表
+
+#### Scenario: 支持的文件格式
+
+- **THEN** 支持: PDF / Word (.docx, .doc) / 纯文本 (.txt, .md, .csv) / HTML / 图片 (.png, .jpg, .jpeg, .tiff) / JSON (.json, .jsonl) / Excel (.xlsx, .xls)
+
+#### Scenario: 文件大小限制
+
+- **WHEN** 单个文件超过 100MB (可配置 MAX_UPLOAD_SIZE_MB)
+- **THEN** 拒绝上传并提示
+
+### Requirement: Azure Blob Storage [Phase 2]
+
+#### Scenario: 配置连接
+
+- **WHEN** 用户填写 connection_string (或 account_name + account_key) + container_name
+- **THEN** 验证连接有效性，列出匹配文件
+
+#### Scenario: 同步文件列表
+
+- **WHEN** 用户点击 "同步"
+- **THEN** 扫描 container 文件，更新文件列表和 last_synced_at

@@ -13,3 +13,9 @@ class Skill(BaseModel):
     skill_type: Mapped[str] = mapped_column(String(50))
     config_schema: Mapped[dict] = mapped_column(JSON, default=dict)
     is_builtin: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # python_code type fields
+    source_code: Mapped[str | None] = mapped_column(Text, default=None)
+    additional_requirements: Mapped[str | None] = mapped_column(Text, default=None)
+    test_input: Mapped[dict | None] = mapped_column(JSON, default=None)
+    connection_mappings: Mapped[dict | None] = mapped_column(JSON, default=None)

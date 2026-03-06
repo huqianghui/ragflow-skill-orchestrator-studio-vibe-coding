@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -155,6 +156,7 @@ const typeColorMap: Record<string, string> = {
 };
 
 export default function SkillLibrary() {
+  const navigate = useNavigate();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -254,6 +256,15 @@ export default function SkillLibrary() {
         await skillsApi.update(editingSkill.id, payload);
         message.success('Skill updated');
       } else {
+        if (values.skill_type === 'python_code') {
+          // For python_code, create then redirect to editor
+          const created = await skillsApi.create(payload);
+          message.success('Skill created');
+          setFormOpen(false);
+          form.resetFields();
+          navigate(`/skills/${created.id}/edit`);
+          return;
+        }
         await skillsApi.create(payload);
         message.success('Skill created');
       }
@@ -289,9 +300,15 @@ export default function SkillLibrary() {
         <Space>
           <span style={{ fontSize: 16 }}>{getSkillIcon(record)}</span>
           <a
-            onClick={() =>
-              record.is_builtin ? setDetailSkill(record) : openEditForm(record)
-            }
+            onClick={() => {
+              if (record.skill_type === 'python_code' && !record.is_builtin) {
+                navigate(`/skills/${record.id}/edit`);
+              } else if (record.is_builtin) {
+                setDetailSkill(record);
+              } else {
+                openEditForm(record);
+              }
+            }}
           >
             {name}
           </a>
@@ -342,7 +359,13 @@ export default function SkillLibrary() {
             type="link"
             size="small"
             disabled={record.is_builtin}
-            onClick={() => openEditForm(record)}
+            onClick={() => {
+              if (record.skill_type === 'python_code') {
+                navigate(`/skills/${record.id}/edit`);
+              } else {
+                openEditForm(record);
+              }
+            }}
           >
             Edit
           </Button>
@@ -371,9 +394,14 @@ export default function SkillLibrary() {
         <Title level={3} style={{ margin: 0 }}>
           Skill Library
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateForm}>
-          New Skill
-        </Button>
+        <Space>
+          <Button type="primary" icon={<CodeOutlined />} onClick={() => navigate('/skills/new')}>
+            New Python Skill
+          </Button>
+          <Button icon={<PlusOutlined />} onClick={openCreateForm}>
+            New Skill
+          </Button>
+        </Space>
       </div>
 
       <Card>

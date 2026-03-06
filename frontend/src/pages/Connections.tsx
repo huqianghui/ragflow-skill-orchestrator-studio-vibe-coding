@@ -13,7 +13,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { PlusOutlined, ApiOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, ApiOutlined } from '@ant-design/icons';
 import type { Connection } from '../types';
 import { connectionsApi } from '../services/api';
 

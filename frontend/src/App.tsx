@@ -4,6 +4,7 @@ import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import SkillLibrary from './pages/SkillLibrary';
 import SkillEditor from './pages/SkillEditor';
+import BuiltinSkillEditor from './pages/BuiltinSkillEditor';
 import Connections from './pages/Connections';
 import Pipelines from './pages/Pipelines';
 import PipelineEditor from './pages/PipelineEditor';
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/skills" element={<SkillLibrary />} />
             <Route path="/skills/new" element={<SkillEditor />} />
             <Route path="/skills/:id/edit" element={<SkillEditor />} />
+            <Route path="/skills/:id/configure" element={<BuiltinSkillEditor />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/pipelines" element={<Pipelines />} />
             <Route path="/pipelines/:id/edit" element={<PipelineEditor />} />

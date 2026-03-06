@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.connection import Connection
 from app.schemas.common import PaginatedResponse
 from app.schemas.connection import (
+    CONNECTION_TYPES,
     SECRET_FIELDS,
     ConnectionCreate,
     ConnectionResponse,
@@ -43,6 +44,15 @@ async def list_connections(
     )
     items = [_to_response(c) for c in result.scalars().all()]
     return paginate(items, total, page, page_size)
+
+
+@router.get("/defaults")
+async def get_default_connections(db: AsyncSession = Depends(get_db)):
+    """Return the default connection for each connection_type (or null)."""
+    result = await db.execute(select(Connection).where(Connection.is_default.is_(True)))
+    defaults_by_type = {c.connection_type: _to_response(c) for c in result.scalars().all()}
+
+    return {ct: defaults_by_type.get(ct) for ct in CONNECTION_TYPES}
 
 
 @router.post("", response_model=ConnectionResponse, status_code=status.HTTP_201_CREATED)
@@ -171,7 +181,10 @@ async def _test_connection_by_type(connection_type: str, config: dict) -> None:
 
             resp = httpx.get(
                 f"{config['endpoint'].rstrip('/')}/",
-                headers={"api-key": config["api_key"]},
+                headers={
+                    "Ocp-Apim-Subscription-Key": config["api_key"],
+                    "api-key": config["api_key"],
+                },
                 timeout=10,
             )
             resp.raise_for_status()
@@ -195,3 +208,27 @@ async def _test_connection_by_type(connection_type: str, config: dict) -> None:
                 code="VALIDATION_ERROR",
                 message=f"Unknown connection type: {connection_type}",
             )
+
+
+@router.put("/{connection_id}/set-default", response_model=ConnectionResponse)
+async def set_default_connection(connection_id: str, db: AsyncSession = Depends(get_db)):
+    """Set a connection as the default for its connection_type."""
+    result = await db.execute(select(Connection).where(Connection.id == connection_id))
+    conn = result.scalar_one_or_none()
+    if not conn:
+        raise NotFoundException("Connection", connection_id)
+
+    # Clear existing default for this type
+    existing = await db.execute(
+        select(Connection).where(
+            Connection.connection_type == conn.connection_type,
+            Connection.is_default.is_(True),
+        )
+    )
+    for other in existing.scalars().all():
+        other.is_default = False
+
+    conn.is_default = True
+    await db.commit()
+    await db.refresh(conn)
+    return _to_response(conn)

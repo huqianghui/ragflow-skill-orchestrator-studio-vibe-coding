@@ -27,6 +27,7 @@ def upgrade() -> None:
         sa.Column("connection_type", sa.String(length=50), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("config", sa.JSON(), nullable=False),
+        sa.Column("is_default", sa.Boolean(), nullable=False, server_default=sa.text("0")),
         sa.Column("id", sa.String(), nullable=False),
         sa.Column(
             "created_at",
@@ -81,6 +82,9 @@ def upgrade() -> None:
         sa.Column("additional_requirements", sa.Text(), nullable=True),
         sa.Column("test_input", sa.JSON(), nullable=True),
         sa.Column("connection_mappings", sa.JSON(), nullable=True),
+        sa.Column("required_resource_types", sa.JSON(), nullable=True),
+        sa.Column("bound_connection_id", sa.String(), nullable=True),
+        sa.Column("config_values", sa.JSON(), nullable=True),
         sa.Column("id", sa.String(), nullable=False),
         sa.Column(
             "created_at",

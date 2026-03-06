@@ -61,6 +61,7 @@ class ConnectionResponse(BaseModel):
     connection_type: str
     description: str | None
     config: dict
+    is_default: bool
     created_at: datetime
     updated_at: datetime
 

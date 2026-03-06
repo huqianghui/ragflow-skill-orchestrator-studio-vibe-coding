@@ -11,6 +11,9 @@ export interface Skill {
   additional_requirements: string | null;
   test_input: Record<string, unknown> | null;
   connection_mappings: Record<string, string> | null;
+  required_resource_types: string[] | null;
+  bound_connection_id: string | null;
+  config_values: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +24,7 @@ export interface Connection {
   connection_type: string;
   description: string | null;
   config: Record<string, unknown>;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }

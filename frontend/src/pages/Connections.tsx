@@ -13,7 +13,7 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { PlusOutlined, ApiOutlined } from '@ant-design/icons';
+import { PlusOutlined, ApiOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
 import type { Connection } from '../types';
 import { connectionsApi } from '../services/api';
 
@@ -126,6 +126,16 @@ export default function Connections() {
     }
   };
 
+  const handleSetDefault = async (id: string) => {
+    try {
+      await connectionsApi.setDefault(id);
+      message.success('Default connection updated');
+      fetchConnections(page, pageSize);
+    } catch {
+      message.error('Failed to set default');
+    }
+  };
+
   const openCreateForm = () => {
     setEditingConn(null);
     form.resetFields();
@@ -186,6 +196,21 @@ export default function Connections() {
 
   const columns = [
     {
+      title: 'Default',
+      key: 'is_default',
+      width: 70,
+      align: 'center' as const,
+      render: (_: unknown, record: Connection) => (
+        <Button
+          type="text"
+          size="small"
+          icon={record.is_default ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined style={{ color: '#d9d9d9' }} />}
+          onClick={() => handleSetDefault(record.id)}
+          title={record.is_default ? 'Default connection for this type' : 'Set as default'}
+        />
+      ),
+    },
+    {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
@@ -203,6 +228,24 @@ export default function Connections() {
           {CONNECTION_TYPES.find(t => t.value === type)?.label || type}
         </Tag>
       ),
+    },
+    {
+      title: 'Endpoint / Details',
+      key: 'details',
+      ellipsis: true,
+      render: (_: unknown, record: Connection) => {
+        const cfg = record.config || {};
+        const parts: string[] = [];
+        if (cfg.endpoint) parts.push(String(cfg.endpoint));
+        else if (cfg.base_url) parts.push(String(cfg.base_url));
+        if (cfg.deployment_name) parts.push(`deployment: ${cfg.deployment_name}`);
+        if (cfg.api_version) parts.push(`v${cfg.api_version}`);
+        return parts.length > 0 ? (
+          <Typography.Text type="secondary" ellipsis={{ tooltip: parts.join(' | ') }}>
+            {parts.join(' | ')}
+          </Typography.Text>
+        ) : '-';
+      },
     },
     {
       title: 'Description',

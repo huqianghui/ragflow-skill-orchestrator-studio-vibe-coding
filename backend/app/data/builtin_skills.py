@@ -8,6 +8,10 @@ BUILTIN_SKILLS: list[dict] = [
         ),
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": [
+            "azure_content_understanding",
+            "azure_doc_intelligence",
+        ],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -36,6 +40,7 @@ BUILTIN_SKILLS: list[dict] = [
         ),
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": None,
         "config_schema": {
             "type": "object",
             "properties": {
@@ -69,6 +74,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "将多个文本片段合并为一个连续的文本文档，支持自定义分隔符。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": None,
         "config_schema": {
             "type": "object",
             "properties": {
@@ -90,6 +96,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "检测输入文本的语言，返回 ISO 639-1 语言代码和置信度分数。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -111,6 +118,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "从文本中识别命名实体，包括人名、地名、组织名、日期、数字等。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -138,6 +146,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "将识别到的实体链接到知识库条目（如 Wikipedia），提供消歧义和上下文关联。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -159,6 +168,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "从文本中提取关键短语和核心概念，用于摘要和索引。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -180,6 +190,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "分析文本的情感倾向，返回正面/负面/中立分类和置信度分数。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -204,6 +215,7 @@ BUILTIN_SKILLS: list[dict] = [
         ),
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -242,6 +254,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "将文本从一种语言翻译为另一种语言，支持自动检测源语言。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -263,6 +276,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "对图片或扫描文档进行光学字符识别，提取文本内容及位置信息。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -291,6 +305,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "分析图片内容，生成描述、提取标签，支持物体检测和场景识别。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_ai_foundry"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -320,6 +335,7 @@ BUILTIN_SKILLS: list[dict] = [
         ),
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": ["azure_openai"],
         "config_schema": {
             "type": "object",
             "properties": {
@@ -348,6 +364,7 @@ BUILTIN_SKILLS: list[dict] = [
         ),
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": None,
         "config_schema": {
             "type": "object",
             "properties": {
@@ -373,6 +390,7 @@ BUILTIN_SKILLS: list[dict] = [
         "description": "条件路由节点，根据输入数据的条件表达式决定数据流向不同的下游分支。",
         "skill_type": "builtin",
         "is_builtin": True,
+        "required_resource_types": None,
         "config_schema": {
             "type": "object",
             "properties": {
@@ -398,6 +416,45 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
             "required": ["condition_field"],
+        },
+    },
+    {
+        "name": "GenAIPrompt",
+        "description": (
+            "使用 Azure OpenAI chat completion 模型对文本进行 AI 处理，支持摘要、分类、信息提取等。"
+        ),
+        "skill_type": "builtin",
+        "is_builtin": True,
+        "required_resource_types": ["azure_openai"],
+        "config_schema": {
+            "type": "object",
+            "properties": {
+                "system_prompt": {
+                    "type": "string",
+                    "default": "You are a helpful assistant.",
+                    "description": "系统提示词",
+                },
+                "user_prompt_template": {
+                    "type": "string",
+                    "default": "Process the following text:\n\n{text}",
+                    "description": ("用户提示词模板，{text} 会被替换为输入文本"),
+                },
+                "model_deployment": {
+                    "type": "string",
+                    "default": "gpt-4o",
+                    "description": "Azure OpenAI 模型部署名称",
+                },
+                "temperature": {
+                    "type": "number",
+                    "default": 0.7,
+                    "description": "生成温度 (0-2)",
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "default": 1024,
+                    "description": "最大生成 token 数",
+                },
+            },
         },
     },
 ]

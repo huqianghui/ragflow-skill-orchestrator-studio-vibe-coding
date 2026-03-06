@@ -52,14 +52,12 @@ class ClientFactory:
                 return OpenAI(api_key=config["api_key"])
 
             case "azure_doc_intelligence":
-                from azure.ai.documentintelligence import (
-                    DocumentIntelligenceClient,
-                )
-                from azure.core.credentials import AzureKeyCredential
+                import httpx
 
-                return DocumentIntelligenceClient(
-                    endpoint=config["endpoint"],
-                    credential=AzureKeyCredential(config["api_key"]),
+                return httpx.Client(
+                    base_url=config["endpoint"].rstrip("/"),
+                    headers={"Ocp-Apim-Subscription-Key": config["api_key"]},
+                    timeout=60,
                 )
 
             case "azure_content_understanding":
@@ -76,7 +74,10 @@ class ClientFactory:
 
                 return httpx.Client(
                     base_url=config["endpoint"].rstrip("/"),
-                    headers={"api-key": config["api_key"]},
+                    headers={
+                        "Ocp-Apim-Subscription-Key": config["api_key"],
+                        "api-key": config["api_key"],
+                    },
                     timeout=60,
                 )
 

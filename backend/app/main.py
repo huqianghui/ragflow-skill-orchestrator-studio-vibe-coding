@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -32,7 +33,18 @@ async def lifespan(app: FastAPI):
         venv_mgr.ensure_base_env()
     except Exception:
         logger.warning("Failed to initialize base venv (non-fatal)", exc_info=True)
+
+    # Start temp file cleanup task
+    async def _cleanup_loop():
+        from app.services.temp_file_manager import cleanup_expired_files
+
+        while True:
+            await asyncio.sleep(600)  # every 10 minutes
+            cleanup_expired_files()
+
+    cleanup_task = asyncio.create_task(_cleanup_loop())
     yield
+    cleanup_task.cancel()
     await engine.dispose()
 
 

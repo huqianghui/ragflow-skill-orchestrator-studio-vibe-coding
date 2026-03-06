@@ -142,6 +142,7 @@ const skillNameIconMap: Record<string, React.ReactNode> = {
   TextEmbedder: <RobotOutlined />,
   Shaper: <FunctionOutlined />,
   Conditional: <ForkOutlined />,
+  GenAIPrompt: <RobotOutlined />,
 };
 
 function getSkillIcon(skill: { name: string; skill_type: string }): React.ReactNode {
@@ -306,10 +307,10 @@ export default function SkillLibrary() {
           <span style={{ fontSize: 16 }}>{getSkillIcon(record)}</span>
           <a
             onClick={() => {
-              if (record.skill_type === 'python_code' && !record.is_builtin) {
+              if (record.is_builtin) {
+                navigate(`/skills/${record.id}/configure`);
+              } else if (record.skill_type === 'python_code') {
                 navigate(`/skills/${record.id}/edit`);
-              } else if (record.is_builtin) {
-                setDetailSkill(record);
               } else {
                 openEditForm(record);
               }
@@ -360,20 +361,29 @@ export default function SkillLibrary() {
           <Button type="link" size="small" onClick={() => setDetailSkill(record)}>
             View
           </Button>
-          <Button
-            type="link"
-            size="small"
-            disabled={record.is_builtin}
-            onClick={() => {
-              if (record.skill_type === 'python_code') {
-                navigate(`/skills/${record.id}/edit`);
-              } else {
-                openEditForm(record);
-              }
-            }}
-          >
-            Edit
-          </Button>
+          {record.is_builtin ? (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => navigate(`/skills/${record.id}/configure`)}
+            >
+              Configure
+            </Button>
+          ) : (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                if (record.skill_type === 'python_code') {
+                  navigate(`/skills/${record.id}/edit`);
+                } else {
+                  openEditForm(record);
+                }
+              }}
+            >
+              Edit
+            </Button>
+          )}
           <Popconfirm
             title={
               record.is_builtin

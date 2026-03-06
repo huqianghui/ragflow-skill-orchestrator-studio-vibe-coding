@@ -19,3 +19,8 @@ class Skill(BaseModel):
     additional_requirements: Mapped[str | None] = mapped_column(Text, default=None)
     test_input: Mapped[dict | None] = mapped_column(JSON, default=None)
     connection_mappings: Mapped[dict | None] = mapped_column(JSON, default=None)
+
+    # builtin skill runtime configuration
+    required_resource_types: Mapped[dict | None] = mapped_column(JSON, default=None)
+    bound_connection_id: Mapped[str | None] = mapped_column(String, default=None)
+    config_values: Mapped[dict | None] = mapped_column(JSON, default=None)

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +12,7 @@ from app.database import get_db
 from app.models.connection import Connection
 from app.models.skill import Skill
 from app.schemas.common import PaginatedResponse
-from app.schemas.skill import SkillCreate, SkillResponse, SkillUpdate
+from app.schemas.skill import SkillConfigureRequest, SkillCreate, SkillResponse, SkillUpdate
 from app.services.skill_context import SkillContext
 from app.services.skill_runner import SkillRunner
 from app.services.venv_manager import VenvManager
@@ -134,6 +134,51 @@ async def update_skill(skill_id: str, body: SkillUpdate, db: AsyncSession = Depe
     return SkillResponse.model_validate(skill)
 
 
+@router.put("/{skill_id}/configure", response_model=SkillResponse)
+async def configure_builtin_skill(
+    skill_id: str,
+    body: SkillConfigureRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update runtime configuration for a built-in skill."""
+    result = await db.execute(select(Skill).where(Skill.id == skill_id))
+    skill = result.scalar_one_or_none()
+    if not skill:
+        raise NotFoundException("Skill", skill_id)
+
+    if not skill.is_builtin:
+        raise AppException(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Only built-in skills can be configured via this endpoint",
+        )
+
+    # Validate bound_connection_id type if provided
+    if body.bound_connection_id is not None:
+        conn_result = await db.execute(
+            select(Connection).where(Connection.id == body.bound_connection_id)
+        )
+        conn = conn_result.scalar_one_or_none()
+        if not conn:
+            raise ValidationException(f"Connection '{body.bound_connection_id}' not found")
+        if (
+            skill.required_resource_types
+            and conn.connection_type not in skill.required_resource_types
+        ):
+            raise ValidationException(
+                f"Connection type '{conn.connection_type}' not compatible "
+                f"with skill requirement {skill.required_resource_types}"
+            )
+        skill.bound_connection_id = body.bound_connection_id
+
+    if body.config_values is not None:
+        skill.config_values = body.config_values
+
+    await db.commit()
+    await db.refresh(skill)
+    return SkillResponse.model_validate(skill)
+
+
 @router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_skill(skill_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Skill).where(Skill.id == skill_id))
@@ -176,11 +221,44 @@ def _cleanup_venv(skill_id: str) -> None:
         logger.warning("Failed to cleanup venv for skill %s", skill_id, exc_info=True)
 
 
+# --- File Upload for Testing ---
+
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
+
+
+@router.post("/upload-test-file")
+async def upload_test_file(file: UploadFile):
+    """Upload a temporary file for skill testing."""
+    from app.services.temp_file_manager import save_temp_file
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise ValidationException(
+            f"File too large ({len(content)} bytes). Max: {MAX_UPLOAD_SIZE} bytes"
+        )
+
+    info = save_temp_file(
+        filename=file.filename or "upload",
+        content=content,
+        content_type=file.content_type or "application/octet-stream",
+    )
+    return {
+        "file_id": info["file_id"],
+        "filename": info["filename"],
+        "content_type": info["content_type"],
+        "size": info["size"],
+        "expires_at": info["expires_at"],
+    }
+
+
 # --- Skill Test Execution ---
 
 
 class SkillTestRequest(BaseModel):
     test_input: dict = Field(..., description="Azure AI Search custom skill format input")
+    config_override: dict | None = Field(
+        default=None, description="Override config_values for this test run only"
+    )
 
 
 class SkillTestCodeRequest(BaseModel):
@@ -235,14 +313,17 @@ async def test_skill(
     body: SkillTestRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Test a saved python_code Skill with sample input."""
+    """Test a saved Skill (python_code or builtin) with sample input."""
     result = await db.execute(select(Skill).where(Skill.id == skill_id))
     skill = result.scalar_one_or_none()
     if not skill:
         raise NotFoundException("Skill", skill_id)
 
+    if skill.skill_type == "builtin":
+        return await _test_builtin_skill(skill, body, db)
+
     if skill.skill_type != "python_code":
-        raise ValidationException("Only python_code skills can be tested")
+        raise ValidationException("Only python_code and builtin skills can be tested")
 
     if not skill.source_code:
         raise ValidationException("Skill has no source code")
@@ -250,6 +331,95 @@ async def test_skill(
     context = await _build_context(skill.connection_mappings, skill.config_schema, db)
     runner = SkillRunner()
     return await _run_with_timeout(runner, skill.source_code, body.test_input, context)
+
+
+async def _test_builtin_skill(skill: Skill, body: SkillTestRequest, db: AsyncSession):
+    """Test a built-in skill using BuiltinSkillRunner."""
+    from app.services.builtin_skills.runner import BuiltinSkillRunner
+
+    # Resolve config: saved config_values, overridden by config_override
+    config = dict(skill.config_values or {})
+    if body.config_override:
+        config.update(body.config_override)
+
+    # Resolve connection client
+    client = None
+    if skill.required_resource_types:
+        conn_id = skill.bound_connection_id
+
+        # Fallback to default connection if none bound
+        if not conn_id:
+            target_type = skill.required_resource_types[0]
+            conn_result = await db.execute(
+                select(Connection).where(
+                    Connection.connection_type == target_type,
+                    Connection.is_default.is_(True),
+                )
+            )
+            default_conn = conn_result.scalar_one_or_none()
+            if default_conn:
+                conn_id = default_conn.id
+
+        if not conn_id:
+            raise ValidationException(
+                f"No connection bound and no default connection "
+                f"for type '{skill.required_resource_types[0]}'"
+            )
+
+        conn_result = await db.execute(select(Connection).where(Connection.id == conn_id))
+        conn = conn_result.scalar_one_or_none()
+        if not conn:
+            raise ValidationException(f"Bound connection '{conn_id}' not found")
+
+        from app.schemas.connection import SECRET_FIELDS
+        from app.services.skill_context import ClientFactory
+        from app.utils.encryption import decrypt_config
+
+        secret_fields = SECRET_FIELDS.get(conn.connection_type, [])
+        decrypted = decrypt_config(conn.config, secret_fields)
+        client = ClientFactory.create(conn.connection_type, decrypted)
+
+    # Resolve file_id in test_input if present
+    test_input = _resolve_file_ids(body.test_input)
+
+    # Inject _connection_type into each record's data so skills can dispatch
+    if conn_id:
+        conn_type = conn.connection_type if conn else None
+        if conn_type:
+            for record in test_input.get("values", []):
+                record.setdefault("data", {})["_connection_type"] = conn_type
+
+    runner = BuiltinSkillRunner()
+    timeout = get_settings().sync_execution_timeout_s
+    try:
+        return await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None, runner.execute, skill.name, test_input, config, client
+            ),
+            timeout=timeout,
+        )
+    except TimeoutError:
+        return {
+            "values": [],
+            "logs": [],
+            "execution_time_ms": timeout * 1000,
+            "error": f"Execution timed out after {timeout}s",
+        }
+
+
+def _resolve_file_ids(test_input: dict) -> dict:
+    """Resolve file_id references in test_input to actual file content."""
+    from app.services.temp_file_manager import resolve_temp_file
+
+    values = test_input.get("values", [])
+    for record in values:
+        data = record.get("data", {})
+        if "file_id" in data:
+            file_info = resolve_temp_file(data["file_id"])
+            if file_info:
+                data["file_content"] = file_info["content"]
+                data["file_name"] = file_info["filename"]
+    return test_input
 
 
 @router.post("/test-code")

@@ -13,6 +13,7 @@ class SkillCreate(BaseModel):
     additional_requirements: str | None = None
     test_input: dict | None = None
     connection_mappings: dict | None = None
+    required_resource_types: list[str] | None = None
 
 
 class SkillUpdate(BaseModel):
@@ -27,6 +28,13 @@ class SkillUpdate(BaseModel):
     connection_mappings: dict | None = None
 
 
+class SkillConfigureRequest(BaseModel):
+    """Update runtime configuration for a built-in skill."""
+
+    config_values: dict | None = None
+    bound_connection_id: str | None = None
+
+
 class SkillResponse(BaseModel):
     id: str
     name: str
@@ -38,6 +46,9 @@ class SkillResponse(BaseModel):
     additional_requirements: str | None
     test_input: dict | None
     connection_mappings: dict | None
+    required_resource_types: list[str] | None
+    bound_connection_id: str | None
+    config_values: dict | None
     created_at: datetime
     updated_at: datetime
 

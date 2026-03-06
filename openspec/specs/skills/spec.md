@@ -11,7 +11,7 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 - **GIVEN** 数据库中存在一个 Skill 记录
 - **THEN** 该 Skill 包含以下字段:
   - id (UUID v4 字符串主键)
-  - name (显示名称, 最长 255 字符)
+  - name (显示名称, 最长 255 字符, **唯一约束**)
   - skill_type (builtin | web_api | config_template | python_code)
   - description (功能描述, 可选)
   - config_schema (JSON 对象, 类型相关的配置参数 JSON Schema)
@@ -24,7 +24,7 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 
 ### Requirement: Skill CRUD 操作
 
-用户可以创建、读取、更新、删除 Skill。内置 Skill 不可更新。
+用户可以创建、读取、更新、删除 Skill。内置 Skill 不可更新。Skill name 创建后不可修改。
 
 #### Scenario: 创建自定义 Skill
 
@@ -34,6 +34,12 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
   - description (可选)
   - config_schema (可选, 默认 {})
 - **THEN** 系统创建 Skill 并返回 201 + 完整 Skill 对象
+
+#### Scenario: 创建重名 Skill 被拒绝
+
+- **GIVEN** 数据库中已存在 name 为 "my-skill" 的 Skill
+- **WHEN** POST /api/v1/skills，body 中 name 为 "my-skill"
+- **THEN** 返回 409 CONFLICT，message 为 "Skill with name 'my-skill' already exists"
 
 #### Scenario: 列出所有 Skill（分页）
 
@@ -47,11 +53,12 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 - **THEN** 返回完整 Skill 对象
 - **AND** 若不存在返回 404 NOT_FOUND
 
-#### Scenario: 更新自定义 Skill
+#### Scenario: 更新自定义 Skill（name 不可修改）
 
 - **GIVEN** 一个 is_builtin=false 的 Skill
 - **WHEN** PUT /api/v1/skills/{id}，body 含需更新的字段
 - **THEN** 系统更新并返回更新后的 Skill 对象
+- **AND** body 中的 name 字段 SHALL 被忽略（SkillUpdate schema 不包含 name）
 
 #### Scenario: 更新内置 Skill 被拒绝
 

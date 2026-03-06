@@ -95,9 +95,10 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
     )
     with op.batch_alter_table("skills", schema=None) as batch_op:
-        batch_op.create_index(batch_op.f("ix_skills_name"), ["name"], unique=False)
+        batch_op.create_index(batch_op.f("ix_skills_name"), ["name"], unique=True)
 
     op.create_table(
         "data_sources",

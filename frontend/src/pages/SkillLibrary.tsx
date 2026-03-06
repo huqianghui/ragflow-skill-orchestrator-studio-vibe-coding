@@ -245,17 +245,17 @@ export default function SkillLibrary() {
       const values = await form.validateFields();
       setFormLoading(true);
 
-      const payload = {
-        name: values.name,
+      const basePayload = {
         description: values.description || null,
         skill_type: values.skill_type,
         config_schema: values.config_schema ? JSON.parse(values.config_schema) : {},
       };
 
       if (editingSkill) {
-        await skillsApi.update(editingSkill.id, payload);
+        await skillsApi.update(editingSkill.id, basePayload);
         message.success('Skill updated');
       } else {
+        const payload = { ...basePayload, name: values.name };
         if (values.skill_type === 'python_code') {
           // For python_code, create then redirect to editor
           const created = await skillsApi.create(payload);
@@ -274,7 +274,12 @@ export default function SkillLibrary() {
       fetchSkills(page, pageSize);
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return; // form validation error
-      message.error('Failed to save skill');
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosErr.response?.status === 409) {
+        message.error(axiosErr.response.data?.message || 'Skill name already exists');
+      } else {
+        message.error('Failed to save skill');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -504,7 +509,7 @@ export default function SkillLibrary() {
             label="Name"
             rules={[{ required: true, message: 'Please enter skill name' }]}
           >
-            <Input placeholder="Enter skill name" />
+            <Input placeholder="Enter skill name" disabled={!!editingSkill} />
           </Form.Item>
           <Form.Item name="description" label="Description">
             <TextArea rows={3} placeholder="Enter skill description" />

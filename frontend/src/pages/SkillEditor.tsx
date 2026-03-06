@@ -164,8 +164,7 @@ export default function SkillEditor() {
         // ignore invalid JSON for test_input
       }
 
-      const payload = {
-        name,
+      const basePayload = {
         description: description || null,
         skill_type: 'python_code' as const,
         source_code: sourceCode,
@@ -175,17 +174,22 @@ export default function SkillEditor() {
       };
 
       if (isNew) {
-        const created = await skillsApi.create(payload);
+        const created = await skillsApi.create({ ...basePayload, name });
         message.success('Skill created');
         setDirty(false);
         navigate(`/skills/${created.id}/edit`, { replace: true });
       } else {
-        await skillsApi.update(id!, payload);
+        await skillsApi.update(id!, basePayload);
         message.success('Skill saved');
         setDirty(false);
       }
-    } catch {
-      message.error('Failed to save skill');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosErr.response?.status === 409) {
+        message.error(axiosErr.response.data?.message || 'Skill name already exists');
+      } else {
+        message.error('Failed to save skill');
+      }
     } finally {
       setSaving(false);
     }
@@ -278,6 +282,7 @@ export default function SkillEditor() {
               <Input
                 placeholder="Skill name"
                 value={name}
+                disabled={!isNew}
                 onChange={(e) => { setName(e.target.value); setDirty(true); }}
               />
               <Input.TextArea

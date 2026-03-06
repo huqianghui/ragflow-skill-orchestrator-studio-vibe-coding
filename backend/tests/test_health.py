@@ -47,13 +47,14 @@ async def test_skills_crud(client: AsyncClient):
     assert data["total"] == 1
     assert len(data["items"]) == 1
 
-    # Update
+    # Update (name is read-only, update description instead)
     response = await client.put(
         f"/api/v1/skills/{skill_id}",
-        json={"name": "Updated Skill"},
+        json={"description": "Updated description"},
     )
     assert response.status_code == 200
-    assert response.json()["name"] == "Updated Skill"
+    assert response.json()["name"] == "Test Skill"
+    assert response.json()["description"] == "Updated description"
 
     # Delete
     response = await client.delete(f"/api/v1/skills/{skill_id}")

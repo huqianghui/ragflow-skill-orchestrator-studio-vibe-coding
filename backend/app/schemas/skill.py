@@ -16,7 +16,6 @@ class SkillCreate(BaseModel):
 
 
 class SkillUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     skill_type: str | None = Field(
         default=None, pattern=r"^(builtin|web_api|config_template|python_code)$"

@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -15,7 +16,12 @@ from app.schemas.skill import SkillCreate, SkillResponse, SkillUpdate
 from app.services.skill_context import SkillContext
 from app.services.skill_runner import SkillRunner
 from app.services.venv_manager import VenvManager
-from app.utils.exceptions import AppException, NotFoundException, ValidationException
+from app.utils.exceptions import (
+    AppException,
+    ConflictException,
+    NotFoundException,
+    ValidationException,
+)
 from app.utils.pagination import paginate, pagination_params
 
 logger = logging.getLogger(__name__)
@@ -76,9 +82,17 @@ async def list_skills(
 
 @router.post("", response_model=SkillResponse, status_code=status.HTTP_201_CREATED)
 async def create_skill(body: SkillCreate, db: AsyncSession = Depends(get_db)):
+    existing = await db.execute(select(Skill).where(Skill.name == body.name))
+    if existing.scalar_one_or_none():
+        raise ConflictException(f"Skill with name '{body.name}' already exists")
+
     skill = Skill(**body.model_dump())
     db.add(skill)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise ConflictException(f"Skill with name '{body.name}' already exists")
     await db.refresh(skill)
     _ensure_skill_venv(skill)
     return SkillResponse.model_validate(skill)

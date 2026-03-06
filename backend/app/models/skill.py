@@ -7,7 +7,7 @@ from app.models.base import BaseModel
 class Skill(BaseModel):
     __tablename__ = "skills"
 
-    name: Mapped[str] = mapped_column(String(255), index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
     description: Mapped[str | None] = mapped_column(Text, default=None)
     # builtin | web_api | config_template | python_code
     skill_type: Mapped[str] = mapped_column(String(50))

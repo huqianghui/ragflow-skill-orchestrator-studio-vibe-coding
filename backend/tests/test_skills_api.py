@@ -147,3 +147,34 @@ async def test_get_preloaded_imports(client: AsyncClient):
     assert "third_party" in data
     assert any("import re" in item for item in data["standard_library"])
     assert any("openai" in item.lower() for item in data["third_party"])
+
+
+@pytest.mark.asyncio
+async def test_create_duplicate_name_returns_409(client: AsyncClient):
+    """Creating a skill with a duplicate name returns 409 CONFLICT."""
+    payload = {"name": "DuplicateSkill", "skill_type": "web_api"}
+    response1 = await client.post("/api/v1/skills", json=payload)
+    assert response1.status_code == 201
+
+    response2 = await client.post("/api/v1/skills", json=payload)
+    assert response2.status_code == 409
+    assert "already exists" in response2.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_update_skill_does_not_accept_name(client: AsyncClient):
+    """PUT /skills/{id} ignores name field (not in SkillUpdate schema)."""
+    create_resp = await client.post(
+        "/api/v1/skills",
+        json={"name": "OriginalName", "skill_type": "web_api"},
+    )
+    assert create_resp.status_code == 201
+    skill_id = create_resp.json()["id"]
+
+    update_resp = await client.put(
+        f"/api/v1/skills/{skill_id}",
+        json={"name": "NewName", "description": "updated desc"},
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["name"] == "OriginalName"
+    assert update_resp.json()["description"] == "updated desc"

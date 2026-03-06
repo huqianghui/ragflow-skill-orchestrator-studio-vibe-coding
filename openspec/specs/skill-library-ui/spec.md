@@ -4,7 +4,7 @@
 
 Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现，支持表格展示、排序、列拖拽、图标、详情查看、创建/编辑表单、删除确认、搜索和筛选。
 
-### Requirement: 表格展示与分页
+### Requirement: 表格展示与分页 [Phase 1 - 已实现]
 
 #### Scenario: 默认分页
 
@@ -22,12 +22,11 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
   - Created At (固定 160px)
   - Actions (固定 180px)
 
-#### Scenario: Name 列为可点击链接
+#### Scenario: Name 列点击行为
 
-- **WHEN** 点击 builtin skill 名称
-- **THEN** 打开 Detail Modal（只读）
-- **WHEN** 点击 custom skill 名称
-- **THEN** 打开 Edit Form Modal（可编辑）
+- **WHEN** 点击 builtin skill 名称 → 打开 Detail Modal（只读）
+- **WHEN** 点击 python_code skill 名称 → 导航到 /skills/{id}/edit（SkillEditor 全页面）
+- **WHEN** 点击其他 custom skill 名称 → 打开 Edit Form Modal
 
 #### Scenario: Description 溢出 Popover
 
@@ -39,35 +38,28 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 
 - **THEN** 每行显示 View / Edit / Delete 按钮
 - **AND** builtin skill 的 Edit 按钮为 disabled
+- **AND** python_code skill 的 Edit 点击导航到 /skills/{id}/edit
 
-### Requirement: 表格排序
-
-支持客户端排序，点击列头切换升序/降序/无排序。
+### Requirement: 表格排序 [Phase 1 - 已实现]
 
 #### Scenario: 可排序列
 
-- **THEN** Name、Type、Created At 三列支持排序
-- **AND** 排序为客户端排序（在当前页数据上排序）
+- **THEN** Name、Type、Created At 三列支持客户端排序
 
-### Requirement: 可拖拽调整列宽
+### Requirement: 可拖拽调整列宽 [Phase 1 - 已实现]
 
-基于 react-resizable 实现，Name 和 Description 列支持拖拽，其他列固定宽度。
+基于 react-resizable 实现。
 
 #### Scenario: 拖拽行为
 
-- **WHEN** 拖拽 Name 列右边框
-- **THEN** 列宽变化，最小 100px
-- **WHEN** 拖拽 Description 列右边框
-- **THEN** 列宽变化，最小 150px
-- **AND** Type / Created At / Actions 列头无拖拽手柄
+- **THEN** Name 列可拖拽 (最小 100px)，Description 列可拖拽 (最小 150px)
+- **AND** Type / Created At / Actions 列固定宽度
 
-### Requirement: Skill 类型图标
-
-每行 Skill 在 Name 列和 Type 列显示对应图标。
+### Requirement: Skill 类型图标 [Phase 1 - 已实现]
 
 #### Scenario: 类型图标映射
 
-- **THEN** Type 列 Tag 中的图标:
+- **THEN** Type 列 Tag 中的图标和颜色:
   - builtin → ToolOutlined (蓝色)
   - web_api → ApiOutlined (绿色)
   - config_template → SettingOutlined (橙色)
@@ -76,38 +68,31 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 #### Scenario: 内置 Skill 专属图标 (Name 列)
 
 - **THEN** 15 个内置 Skill 按名称显示专属图标:
-  - DocumentCracker → FileSearchOutlined
-  - TextSplitter → ScissorOutlined
-  - TextMerger → MergeCellsOutlined
-  - LanguageDetector → GlobalOutlined
-  - EntityRecognizer → TagsOutlined
-  - EntityLinker → BranchesOutlined
-  - KeyPhraseExtractor → HighlightOutlined
-  - SentimentAnalyzer → SmileOutlined
-  - PIIDetector → EyeInvisibleOutlined
-  - TextTranslator → TranslationOutlined
-  - OCR → ScanOutlined
-  - ImageAnalyzer → PictureOutlined
-  - TextEmbedder → RobotOutlined
-  - Shaper → FunctionOutlined
-  - Conditional → ForkOutlined
+  - DocumentCracker → FileSearchOutlined, TextSplitter → ScissorOutlined
+  - TextMerger → MergeCellsOutlined, LanguageDetector → GlobalOutlined
+  - EntityRecognizer → TagsOutlined, EntityLinker → BranchesOutlined
+  - KeyPhraseExtractor → HighlightOutlined, SentimentAnalyzer → SmileOutlined
+  - PIIDetector → EyeInvisibleOutlined, TextTranslator → TranslationOutlined
+  - OCR → ScanOutlined, ImageAnalyzer → PictureOutlined
+  - TextEmbedder → RobotOutlined, Shaper → FunctionOutlined, Conditional → ForkOutlined
 
-### Requirement: Skill 详情 Modal
+### Requirement: Skill 详情 Modal [Phase 1 - 已实现]
 
 #### Scenario: 查看详情
 
 - **WHEN** 点击 View 按钮或 builtin skill 名称
 - **THEN** 打开 "Skill Details" Modal (宽 640px)
-- **AND** 使用 Descriptions 组件显示: Name / Type (Tag) / Description / Built-in (Tag) / Config Schema (格式化 JSON, pre 标签) / Created At / Updated At
+- **AND** 使用 Descriptions 组件显示: Name / Type (Tag) / Description / Built-in (Tag) / Config Schema (格式化 JSON) / Created At / Updated At
 
-#### Scenario: 关闭详情
+### Requirement: 创建 Skill [Phase 1 - 已实现]
 
-- **WHEN** 点击关闭按钮或 Modal 外部
-- **THEN** Modal 关闭
+#### Scenario: 两种创建入口
 
-### Requirement: 创建 Skill
+- **THEN** 页面顶部显示两个按钮:
+  - "New Python Skill" → 导航到 /skills/new（SkillEditor 全页面）
+  - "New Skill" → 打开 Form Modal
 
-#### Scenario: 打开创建表单
+#### Scenario: Form Modal 创建
 
 - **WHEN** 点击 "New Skill" 按钮
 - **THEN** 打开表单 Modal，字段:
@@ -116,10 +101,10 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
   - skill_type (必填, Select: web_api / config_template / python_code)
   - config_schema (可选, TextArea, JSON 格式)
 
-#### Scenario: 提交有效表单
+#### Scenario: python_code 类型创建后重定向
 
-- **WHEN** 填写所有必填字段并提交
-- **THEN** 调用 POST /api/v1/skills，成功后刷新列表
+- **WHEN** Form Modal 中选择 skill_type=python_code 并提交
+- **THEN** 创建成功后自动导航到 /skills/{id}/edit（SkillEditor 页面）
 
 #### Scenario: 创建重名 Skill 错误提示
 
@@ -133,11 +118,11 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 - **WHEN** config_schema 输入无效 JSON
 - **THEN** 表单显示 "Invalid JSON format" 错误，阻止提交
 
-### Requirement: 编辑 Skill
+### Requirement: 编辑 Skill [Phase 1 - 已实现]
 
 #### Scenario: 打开编辑表单
 
-- **WHEN** 点击非 builtin Skill 的 Edit 按钮或名称
+- **WHEN** 点击非 builtin、非 python_code Skill 的 Edit 按钮
 - **THEN** 打开预填当前值的编辑表单 Modal
 - **AND** name 字段 SHALL 为 disabled（只读），不可修改
 
@@ -147,7 +132,7 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 - **THEN** 调用 PUT /api/v1/skills/{id}，请求 body 中不包含 name 字段
 - **AND** 成功后刷新列表
 
-### Requirement: 删除确认
+### Requirement: 删除确认 [Phase 1 - 已实现]
 
 #### Scenario: 删除内置 Skill
 
@@ -161,7 +146,7 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 - **THEN** Popconfirm: "Are you sure you want to delete this skill?"
 - **AND** 确认后调用 DELETE API 并刷新列表
 
-### Requirement: 搜索与筛选
+### Requirement: 搜索与筛选 [Phase 1 - 已实现]
 
 客户端搜索和筛选，作用于当前页已加载的数据。
 
@@ -172,15 +157,10 @@ Skill Library 前端页面的交互规格，基于 Ant Design Table 组件实现
 
 #### Scenario: 类型筛选
 
-- **WHEN** 在类型下拉中选择一个或多个类型
+- **WHEN** 在类型下拉中选择一个或多个类型 (builtin / web_api / config_template / python_code)
 - **THEN** 仅显示 skill_type 匹配的 Skill
 
 #### Scenario: 组合搜索
 
 - **WHEN** 同时输入关键词和选择类型
 - **THEN** 仅显示同时满足两个条件的 Skill
-
-#### Scenario: 清除筛选
-
-- **WHEN** 清空搜索框和类型筛选
-- **THEN** 显示所有 Skill

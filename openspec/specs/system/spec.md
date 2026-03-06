@@ -2,7 +2,7 @@
 
 ## Purpose
 
-系统模块涵盖全局性功能：健康检查、配置管理、API 通用规范。MVP 阶段为单用户无认证模式。
+系统模块涵盖全局性功能：健康检查、配置管理、API 通用规范、数据库初始化。MVP 阶段为单用户无认证模式。
 
 ### Requirement: 健康检查 [Phase 1 - 已实现]
 
@@ -24,8 +24,6 @@
   {"status": "degraded", "version": "0.1.0", "database": "disconnected"}
   ```
 
-- [Phase 2 扩展字段]: uptime_seconds, storage
-
 ### Requirement: 配置管理 [Phase 1 - 已实现]
 
 通过 pydantic-settings 管理，支持环境变量和 .env 文件。
@@ -43,9 +41,12 @@
 | DATABASE_URL | sqlite+aiosqlite:///./data/app.db | 数据库连接 |
 | API_PREFIX | /api/v1 | API 路径前缀 |
 | CORS_ORIGINS | ["http://localhost:15173"] | 允许的跨域来源 |
-| MAX_UPLOAD_SIZE_MB | 100 | 最大上传文件大小 |
-| SYNC_EXECUTION_TIMEOUT_S | 300 | 同步执行超时 |
-| CLEANUP_RETENTION_DAYS | 7 | 中间结果保留天数 |
+| ENCRYPTION_KEY | (必填) | Connection 加密密钥 (Fernet) |
+| PYTHON_SKILL_TIMEOUT_S | 30 | Python Skill 执行超时 |
+| VENV_BASE_DIR | ./data/venvs | Skill venv 存储目录 |
+| MAX_UPLOAD_SIZE_MB | 100 | 最大上传文件大小 [Phase 2] |
+| SYNC_EXECUTION_TIMEOUT_S | 300 | Pipeline 同步执行超时 [Phase 2] |
+| CLEANUP_RETENTION_DAYS | 7 | 中间结果保留天数 [Phase 2] |
 | LOG_LEVEL | INFO | 日志级别 |
 
 ### Requirement: API 通用规范 [Phase 1 - 已实现]
@@ -67,7 +68,7 @@
     "details": null
   }
   ```
-- **AND** 错误码为字符串常量: NOT_FOUND / FORBIDDEN / VALIDATION_ERROR / CONFLICT
+- **AND** 错误码: NOT_FOUND / FORBIDDEN / VALIDATION_ERROR / CONFLICT
 
 #### Scenario: 分页响应
 
@@ -104,6 +105,7 @@
 - **WHEN** FastAPI lifespan 启动
 - **THEN** 自动创建所有 ORM 表 (Base.metadata.create_all)
 - **AND** 执行内置 Skill 播种
+- **AND** 初始化基础 venv (预装常用 Python 包)
 - **AND** 应用关闭时释放数据库连接
 
 ### Requirement: 中间结果清理 [Phase 2]
@@ -113,11 +115,6 @@
 - **GIVEN** CLEANUP_RETENTION_DAYS = 7
 - **WHEN** 每日凌晨 2:00 执行清理任务
 - **THEN** 删除超过 7 天且未标记 "保留" 的 Run 中间结果
-
-#### Scenario: 手动清理
-
-- **WHEN** 用户在系统管理页面点击 "立即清理"
-- **THEN** 执行清理并返回结果摘要
 
 ### Requirement: 存储管理 [Phase 2]
 

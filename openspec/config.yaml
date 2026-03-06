@@ -8,12 +8,15 @@ project:
 
 tech_stack:
   backend: Python FastAPI
-  frontend: React
+  frontend: React + Ant Design + Vite
+  database: SQLite (async via aiosqlite, SQLAlchemy 2.0)
   auth: none  # MVP single-user mode
 
 specs:
   - skills/spec.md
+  - connections/spec.md
   - skill-library-ui/spec.md
+  - skill-editor-ui/spec.md
   - pipelines/spec.md
   - datasources/spec.md
   - runs/spec.md
@@ -26,7 +29,7 @@ decisions:
   custom_skill_types:
     - web_api
     - config_template
-    - python_code_upload
+    - python_code
   skill_discovery: marketplace/library + pipeline templates
   datasources:
     - local_file_upload

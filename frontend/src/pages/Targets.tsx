@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, message, Popconfirm, Table, Tag, Typography } from 'antd';
+import { Button, Card, Input, message, Popconfirm, Space, Table, Tag, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Target, TargetType } from '../types';
 import { targetsApi } from '../services/api';
+import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 
 const { Title } = Typography;
 
@@ -39,13 +40,22 @@ export default function Targets() {
   const navigate = useNavigate();
   const [targets, setTargets] = useState<Target[]>([]);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
   const [testingId, setTestingId] = useState<string | null>(null);
+
+  // Search
+  const [searchText, setSearchText] = useState('');
+
+  // Resizable column widths
+  const [colWidths, setColWidths] = useState({ name: 160 });
+  const handleResize = makeResizeHandler(setColWidths);
 
   const fetchTargets = async () => {
     setLoading(true);
     try {
       const res = await targetsApi.list(1, 100);
       setTargets(res.items);
+      setTotal(res.total);
     } catch {
       message.error('Failed to load targets');
     } finally {
@@ -56,6 +66,15 @@ export default function Targets() {
   useEffect(() => {
     fetchTargets();
   }, []);
+
+  // Client-side search filter
+  const filteredTargets = useMemo(() => {
+    if (!searchText) return targets;
+    const lower = searchText.toLowerCase();
+    return targets.filter(
+      (t) => t.name.toLowerCase().includes(lower),
+    );
+  }, [targets, searchText]);
 
   const handleTest = async (id: string) => {
     setTestingId(id);
@@ -88,13 +107,22 @@ export default function Targets() {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: colWidths.name,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      onHeaderCell: () => ({
+        width: colWidths.name,
+        onResize: handleResize('name', 100),
+      }),
+      render: (name: string) => <OverflowPopover text={name} />,
     },
     {
       title: 'Type',
       dataIndex: 'target_type',
       key: 'target_type',
+      width: 200,
+      sorter: (a, b) => a.target_type.localeCompare(b.target_type),
       render: (type: TargetType) => (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Space>
           <img
             src={TYPE_ICONS[type]}
             alt={type}
@@ -102,13 +130,15 @@ export default function Targets() {
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
           <Tag color={TYPE_COLORS[type]}>{TYPE_LABELS[type] || type}</Tag>
-        </span>
+        </Space>
       ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      width: 100,
+      sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status: string) => {
         const colorMap: Record<string, string> = { active: 'green', inactive: 'default', error: 'red' };
         return <Tag color={colorMap[status]}>{status}</Tag>;
@@ -118,14 +148,18 @@ export default function Targets() {
       title: 'Created At',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      width: 160,
+      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      render: (val: string) => new Date(val).toLocaleString(),
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 180,
       render: (_, record) => (
-        <span style={{ display: 'flex', gap: 8 }}>
+        <Space>
           <Button
+            type="link"
             size="small"
             loading={testingId === record.id}
             onClick={() => handleTest(record.id)}
@@ -135,10 +169,12 @@ export default function Targets() {
           <Popconfirm
             title="Delete this target?"
             onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
           >
-            <Button size="small" danger>Delete</Button>
+            <Button type="link" size="small" danger>Delete</Button>
           </Popconfirm>
-        </span>
+        </Space>
       ),
     },
   ];
@@ -152,11 +188,31 @@ export default function Targets() {
         </Button>
       </div>
       <Card>
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Input.Search
+            placeholder="Search by name"
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => !e.target.value && setSearchText('')}
+            style={{ width: 300 }}
+          />
+        </Space>
+
         <Table<Target>
           columns={columns}
-          dataSource={targets}
+          dataSource={filteredTargets}
           rowKey="id"
           loading={loading}
+          components={{ header: { cell: ResizableTitle } }}
+          tableLayout="fixed"
+          scroll={{ x: colWidths.name + 200 + 100 + 160 + 180 }}
+          pagination={{
+            total: filteredTargets.length !== targets.length ? filteredTargets.length : total,
+            pageSize: 20,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (t) => `Total ${t} targets`,
+          }}
         />
       </Card>
     </div>

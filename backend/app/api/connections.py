@@ -65,7 +65,20 @@ async def create_connection(body: ConnectionCreate, db: AsyncSession = Depends(g
         connection_type=body.connection_type,
         description=body.description,
         config=encrypted,
+        is_default=body.is_default,
     )
+
+    # If setting as default, clear existing default for this type
+    if body.is_default:
+        existing = await db.execute(
+            select(Connection).where(
+                Connection.connection_type == body.connection_type,
+                Connection.is_default.is_(True),
+            )
+        )
+        for other in existing.scalars().all():
+            other.is_default = False
+
     db.add(conn)
     await db.commit()
     await db.refresh(conn)
@@ -98,6 +111,18 @@ async def update_connection(
     if "config" in update_data and update_data["config"] is not None:
         secret_fields = SECRET_FIELDS.get(conn.connection_type, [])
         update_data["config"] = encrypt_config(update_data["config"], secret_fields)
+
+    # If setting as default, clear existing default for this type
+    if update_data.get("is_default") is True:
+        existing = await db.execute(
+            select(Connection).where(
+                Connection.connection_type == conn.connection_type,
+                Connection.is_default.is_(True),
+                Connection.id != conn.id,
+            )
+        )
+        for other in existing.scalars().all():
+            other.is_default = False
 
     for key, value in update_data.items():
         setattr(conn, key, value)
@@ -212,23 +237,31 @@ async def _test_connection_by_type(connection_type: str, config: dict) -> None:
 
 @router.put("/{connection_id}/set-default", response_model=ConnectionResponse)
 async def set_default_connection(connection_id: str, db: AsyncSession = Depends(get_db)):
-    """Set a connection as the default for its connection_type."""
+    """Toggle a connection as the default for its connection_type.
+
+    If the connection is already the default, unset it.
+    Otherwise, set it as default and clear any existing default for the same type.
+    """
     result = await db.execute(select(Connection).where(Connection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise NotFoundException("Connection", connection_id)
 
-    # Clear existing default for this type
-    existing = await db.execute(
-        select(Connection).where(
-            Connection.connection_type == conn.connection_type,
-            Connection.is_default.is_(True),
+    if conn.is_default:
+        # Already default → unset
+        conn.is_default = False
+    else:
+        # Clear existing default for this type
+        existing = await db.execute(
+            select(Connection).where(
+                Connection.connection_type == conn.connection_type,
+                Connection.is_default.is_(True),
+            )
         )
-    )
-    for other in existing.scalars().all():
-        other.is_default = False
+        for other in existing.scalars().all():
+            other.is_default = False
+        conn.is_default = True
 
-    conn.is_default = True
     await db.commit()
     await db.refresh(conn)
     return _to_response(conn)

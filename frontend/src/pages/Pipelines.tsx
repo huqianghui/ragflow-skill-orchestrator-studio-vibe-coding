@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button, Card, Form, Input, Modal, Select, Space, Table, Tag,
@@ -8,6 +8,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, BugOutlined } from '@ant-de
 import type { ColumnsType } from 'antd/es/table';
 import type { Pipeline, PipelineTemplate } from '../types';
 import { pipelinesApi } from '../services/api';
+import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 
 const { Title, Paragraph } = Typography;
 
@@ -18,6 +19,13 @@ export default function Pipelines() {
   const [modalOpen, setModalOpen] = useState(false);
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
   const [form] = Form.useForm();
+
+  // Search
+  const [searchText, setSearchText] = useState('');
+
+  // Resizable column widths
+  const [colWidths, setColWidths] = useState({ name: 160, description: 300 });
+  const handleResize = makeResizeHandler(setColWidths);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -32,6 +40,17 @@ export default function Pipelines() {
   };
 
   useEffect(() => { loadPipelines(); }, []);
+
+  // Client-side search filter
+  const filteredPipelines = useMemo(() => {
+    if (!searchText) return pipelines;
+    const lower = searchText.toLowerCase();
+    return pipelines.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lower) ||
+        (p.description && p.description.toLowerCase().includes(lower)),
+    );
+  }, [pipelines, searchText]);
 
   const openNewModal = async () => {
     form.resetFields();
@@ -78,15 +97,24 @@ export default function Pipelines() {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: colWidths.name,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      onHeaderCell: () => ({
+        width: colWidths.name,
+        onResize: handleResize('name', 100),
+      }),
       render: (name: string, record) => (
-        <a onClick={() => navigate(`/pipelines/${record.id}`)}>{name}</a>
+        <a onClick={() => navigate(`/pipelines/${record.id}`)}>
+          <OverflowPopover text={name} />
+        </a>
       ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 110,
+      sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status: string) => {
         const colorMap: Record<string, string> = {
           draft: 'default', validated: 'blue', active: 'green', archived: 'gray',
@@ -98,19 +126,27 @@ export default function Pipelines() {
       title: 'Nodes',
       key: 'nodes',
       width: 80,
+      sorter: (a, b) =>
+        (a.graph_data?.nodes?.length ?? 0) - (b.graph_data?.nodes?.length ?? 0),
       render: (_: unknown, record: Pipeline) => (record.graph_data?.nodes?.length ?? 0),
     },
     {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
-      ellipsis: true,
+      width: colWidths.description,
+      onHeaderCell: () => ({
+        width: colWidths.description,
+        onResize: handleResize('description', 150),
+      }),
+      render: (text: string) => <OverflowPopover text={text} />,
     },
     {
       title: 'Created',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 180,
+      width: 160,
+      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       render: (d: string) => new Date(d).toLocaleString(),
     },
     {
@@ -153,12 +189,30 @@ export default function Pipelines() {
         </Button>
       </div>
       <Card>
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Input.Search
+            placeholder="Search by name or description"
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => !e.target.value && setSearchText('')}
+            style={{ width: 300 }}
+          />
+        </Space>
+
         <Table<Pipeline>
           columns={columns}
-          dataSource={pipelines}
+          dataSource={filteredPipelines}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 20 }}
+          components={{ header: { cell: ResizableTitle } }}
+          tableLayout="fixed"
+          scroll={{ x: colWidths.name + 110 + 80 + colWidths.description + 160 + 200 }}
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+            showTotal: (t) => `Total ${t} pipelines`,
+          }}
         />
       </Card>
 

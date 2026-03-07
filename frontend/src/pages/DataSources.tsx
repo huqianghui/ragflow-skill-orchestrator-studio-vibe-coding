@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -14,8 +14,10 @@ import {
   Typography,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import type { DataSource, DataSourceType } from '../types';
 import { dataSourcesApi } from '../services/api';
+import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 
 const { Title } = Typography;
 
@@ -53,7 +55,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-// ── Config fields for edit modal (simplified — reuse from DataSourceNew would be better via shared module) ──
+// ── Config fields for edit modal ──
 const CONFIG_FIELDS: Record<string, Array<{ name: string; label: string; secret?: boolean; required?: boolean }>> = {
   azure_blob: [
     { name: 'connection_string', label: 'Connection String', secret: true, required: true },
@@ -73,7 +75,6 @@ const CONFIG_FIELDS: Record<string, Array<{ name: string; label: string; secret?
     { name: 'region', label: 'Region', required: true },
     { name: 'path_prefix', label: 'Path Prefix' },
   ],
-  // Other types can be added as needed; for now keep it minimal
 };
 
 export default function DataSources() {
@@ -89,6 +90,13 @@ export default function DataSources() {
   const [editingDs, setEditingDs] = useState<DataSource | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [form] = Form.useForm();
+
+  // Search
+  const [searchText, setSearchText] = useState('');
+
+  // Resizable column widths
+  const [colWidths, setColWidths] = useState({ name: 160, description: 200 });
+  const handleResize = makeResizeHandler(setColWidths);
 
   const fetchData = useCallback(async (p: number, ps: number) => {
     setLoading(true);
@@ -106,6 +114,15 @@ export default function DataSources() {
   useEffect(() => {
     fetchData(page, pageSize);
   }, [page, pageSize, fetchData]);
+
+  // Client-side search filter
+  const filteredDataSources = useMemo(() => {
+    if (!searchText) return dataSources;
+    const lower = searchText.toLowerCase();
+    return dataSources.filter(
+      (ds) => ds.name.toLowerCase().includes(lower),
+    );
+  }, [dataSources, searchText]);
 
   const handleTest = async (id: string) => {
     setTestingId(id);
@@ -173,13 +190,21 @@ export default function DataSources() {
     }
   };
 
-  const columns = [
+  const columns: ColumnsType<DataSource> = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: colWidths.name,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      onHeaderCell: () => ({
+        width: colWidths.name,
+        onResize: handleResize('name', 100),
+      }),
       render: (name: string, record: DataSource) => (
-        <a onClick={() => openEdit(record)}>{name}</a>
+        <a onClick={() => openEdit(record)}>
+          <OverflowPopover text={name} />
+        </a>
       ),
     },
     {
@@ -187,6 +212,7 @@ export default function DataSources() {
       dataIndex: 'source_type',
       key: 'source_type',
       width: 260,
+      sorter: (a, b) => a.source_type.localeCompare(b.source_type),
       render: (type: DataSourceType) => {
         const meta = TYPE_META[type] || { label: type, color: 'default', icon: '' };
         return (
@@ -207,6 +233,7 @@ export default function DataSources() {
       dataIndex: 'status',
       key: 'status',
       width: 100,
+      sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status: string) => {
         const colorMap: Record<string, string> = { active: 'green', inactive: 'default', error: 'red' };
         return <Tag color={colorMap[status]}>{status}</Tag>;
@@ -225,6 +252,7 @@ export default function DataSources() {
       dataIndex: 'created_at',
       key: 'created_at',
       width: 160,
+      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       render: (v: string) => new Date(v).toLocaleString(),
     },
     {
@@ -269,17 +297,31 @@ export default function DataSources() {
       </div>
 
       <Card>
-        <Table
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Input.Search
+            placeholder="Search by name"
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => !e.target.value && setSearchText('')}
+            style={{ width: 300 }}
+          />
+        </Space>
+
+        <Table<DataSource>
           columns={columns}
-          dataSource={dataSources}
+          dataSource={filteredDataSources}
           rowKey="id"
           loading={loading}
+          components={{ header: { cell: ResizableTitle } }}
+          tableLayout="fixed"
+          scroll={{ x: colWidths.name + 260 + 100 + 80 + 100 + 160 + 220 }}
           pagination={{
             current: page,
             pageSize,
-            total,
+            total: filteredDataSources.length !== dataSources.length ? filteredDataSources.length : total,
             onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
             showTotal: (t) => `Total ${t} data sources`,
           }}
         />

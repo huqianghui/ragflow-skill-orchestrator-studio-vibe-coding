@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -9,7 +9,6 @@ import {
   message,
   Modal,
   Popconfirm,
-  Popover,
   Select,
   Space,
   Table,
@@ -39,76 +38,10 @@ import {
   ToolOutlined,
   TranslationOutlined,
 } from '@ant-design/icons';
-import { Resizable } from 'react-resizable';
-import 'react-resizable/css/styles.css';
 import type { ColumnsType } from 'antd/es/table';
 import type { Skill } from '../types';
 import { skillsApi } from '../services/api';
-
-const ResizableTitle = (
-  props: React.HTMLAttributes<HTMLTableCellElement> & {
-    onResize?: (e: React.SyntheticEvent, data: { size: { width: number } }) => void;
-    width?: number;
-  },
-) => {
-  const { onResize, width, ...restProps } = props;
-  if (!width || !onResize) {
-    return <th {...restProps} />;
-  }
-  return (
-    <Resizable
-      width={width}
-      height={0}
-      handle={
-        <span
-          className="react-resizable-handle"
-          style={{ position: 'absolute', right: -5, bottom: 0, top: 0, cursor: 'col-resize', width: 10, zIndex: 1 }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      }
-      onResize={onResize}
-      draggableOpts={{ enableUserSelectHack: false }}
-    >
-      <th {...restProps} />
-    </Resizable>
-  );
-};
-
-function OverflowPopover({ text }: { text: string | null | undefined }) {
-  const spanRef = useRef<HTMLSpanElement>(null);
-  const [overflowed, setOverflowed] = useState(false);
-
-  const checkOverflow = () => {
-    const el = spanRef.current;
-    if (el) {
-      setOverflowed(el.scrollWidth > el.clientWidth);
-    }
-  };
-
-  if (!text) return <span>-</span>;
-
-  const inner = (
-    <span
-      ref={spanRef}
-      onMouseEnter={checkOverflow}
-      style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-    >
-      {text}
-    </span>
-  );
-
-  if (!overflowed) return inner;
-
-  return (
-    <Popover
-      content={<div style={{ maxWidth: 400, wordBreak: 'break-word' }}>{text}</div>}
-      trigger="hover"
-      mouseEnterDelay={0.5}
-    >
-      {inner}
-    </Popover>
-  );
-}
+import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -286,10 +219,7 @@ export default function SkillLibrary() {
     }
   };
 
-  const handleResize = (key: 'name' | 'description', minWidth: number) =>
-    (_: React.SyntheticEvent, { size }: { size: { width: number } }) => {
-      setColWidths((prev) => ({ ...prev, [key]: Math.max(size.width, minWidth) }));
-    };
+  const handleResize = makeResizeHandler(setColWidths);
 
   const columns: ColumnsType<Skill> = [
     {
@@ -448,6 +378,7 @@ export default function SkillLibrary() {
           loading={loading}
           components={{ header: { cell: ResizableTitle } }}
           tableLayout="fixed"
+          scroll={{ x: colWidths.name + 100 + colWidths.description + 160 + 180 }}
           pagination={{
             current: page,
             pageSize,

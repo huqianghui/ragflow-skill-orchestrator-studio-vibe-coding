@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
@@ -9,13 +9,16 @@ import {
   Popconfirm,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Typography,
 } from 'antd';
 import { PlusOutlined, ApiOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import type { Connection } from '../types';
 import { connectionsApi } from '../services/api';
+import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 
 const { Title } = Typography;
 
@@ -83,6 +86,13 @@ export default function Connections() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
+  // Search
+  const [searchText, setSearchText] = useState('');
+
+  // Resizable column widths
+  const [colWidths, setColWidths] = useState({ name: 200, details: 280, description: 200 });
+  const handleResize = makeResizeHandler(setColWidths);
+
   const fetchConnections = useCallback(async (p: number, ps: number) => {
     setLoading(true);
     try {
@@ -99,6 +109,17 @@ export default function Connections() {
   useEffect(() => {
     fetchConnections(page, pageSize);
   }, [page, pageSize, fetchConnections]);
+
+  // Client-side search filter
+  const filteredConnections = useMemo(() => {
+    if (!searchText) return connections;
+    const lower = searchText.toLowerCase();
+    return connections.filter(
+      (c) =>
+        c.name.toLowerCase().includes(lower) ||
+        (c.description && c.description.toLowerCase().includes(lower)),
+    );
+  }, [connections, searchText]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -150,6 +171,7 @@ export default function Connections() {
       name: conn.name,
       description: conn.description || '',
       connection_type: conn.connection_type,
+      is_default: conn.is_default,
       ...conn.config,
     });
     setFormOpen(true);
@@ -173,6 +195,7 @@ export default function Connections() {
         description: values.description || null,
         connection_type: values.connection_type || selectedType,
         config,
+        is_default: values.is_default ?? false,
       };
 
       if (editingConn) {
@@ -194,11 +217,11 @@ export default function Connections() {
     }
   };
 
-  const columns = [
+  const columns: ColumnsType<Connection> = [
     {
       title: 'Default',
       key: 'is_default',
-      width: 70,
+      width: 80,
       align: 'center' as const,
       render: (_: unknown, record: Connection) => (
         <Button
@@ -214,8 +237,16 @@ export default function Connections() {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: colWidths.name,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      onHeaderCell: () => ({
+        width: colWidths.name,
+        onResize: handleResize('name', 100),
+      }),
       render: (name: string, record: Connection) => (
-        <a onClick={() => openEditForm(record)}>{name}</a>
+        <a onClick={() => openEditForm(record)}>
+          <OverflowPopover text={name} />
+        </a>
       ),
     },
     {
@@ -223,6 +254,7 @@ export default function Connections() {
       dataIndex: 'connection_type',
       key: 'connection_type',
       width: 200,
+      sorter: (a, b) => a.connection_type.localeCompare(b.connection_type),
       render: (type: string) => (
         <Tag icon={<ApiOutlined />} color={typeColorMap[type] || 'default'}>
           {CONNECTION_TYPES.find(t => t.value === type)?.label || type}
@@ -232,7 +264,11 @@ export default function Connections() {
     {
       title: 'Endpoint / Details',
       key: 'details',
-      ellipsis: true,
+      width: colWidths.details,
+      onHeaderCell: () => ({
+        width: colWidths.details,
+        onResize: handleResize('details', 150),
+      }),
       render: (_: unknown, record: Connection) => {
         const cfg = record.config || {};
         const parts: string[] = [];
@@ -240,30 +276,33 @@ export default function Connections() {
         else if (cfg.base_url) parts.push(String(cfg.base_url));
         if (cfg.deployment_name) parts.push(`deployment: ${cfg.deployment_name}`);
         if (cfg.api_version) parts.push(`v${cfg.api_version}`);
-        return parts.length > 0 ? (
-          <Typography.Text type="secondary" ellipsis={{ tooltip: parts.join(' | ') }}>
-            {parts.join(' | ')}
-          </Typography.Text>
-        ) : '-';
+        const text = parts.length > 0 ? parts.join(' | ') : null;
+        return <OverflowPopover text={text} />;
       },
     },
     {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
-      render: (text: string | null) => text || '-',
+      width: colWidths.description,
+      onHeaderCell: () => ({
+        width: colWidths.description,
+        onResize: handleResize('description', 100),
+      }),
+      render: (text: string) => <OverflowPopover text={text} />,
     },
     {
       title: 'Created At',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 160,
+      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       render: (v: string) => new Date(v).toLocaleString(),
     },
     {
       title: 'Actions',
       key: 'actions',
-      width: 240,
+      width: 200,
       render: (_: unknown, record: Connection) => (
         <Space>
           <Button
@@ -306,17 +345,33 @@ export default function Connections() {
       </div>
 
       <Card>
-        <Table
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Input.Search
+            placeholder="Search by name or description"
+            allowClear
+            onSearch={setSearchText}
+            onChange={(e) => !e.target.value && setSearchText('')}
+            style={{ width: 300 }}
+          />
+        </Space>
+
+        <Table<Connection>
           columns={columns}
-          dataSource={connections}
+          dataSource={filteredConnections}
           rowKey="id"
           loading={loading}
+          components={{ header: { cell: ResizableTitle } }}
+          tableLayout="fixed"
+          scroll={{ x: 80 + colWidths.name + 200 + colWidths.details + colWidths.description + 160 + 200 }}
           pagination={{
             current: page,
             pageSize,
-            total,
+            total: filteredConnections.length !== connections.length
+              ? filteredConnections.length
+              : total,
             onChange: (p, ps) => { setPage(p); setPageSize(ps); },
             showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
             showTotal: (t) => `Total ${t} connections`,
           }}
         />
@@ -354,6 +409,14 @@ export default function Connections() {
               onChange={(v) => setSelectedType(v)}
               disabled={!!editingConn}
             />
+          </Form.Item>
+          <Form.Item
+            name="is_default"
+            label="Set as Default"
+            valuePropName="checked"
+            tooltip="Only one default connection per type. Setting this will unset any existing default of the same type."
+          >
+            <Switch />
           </Form.Item>
 
           {currentFields.map((field) => (

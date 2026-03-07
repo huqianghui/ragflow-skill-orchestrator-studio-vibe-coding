@@ -1,8 +1,13 @@
 """Document processing built-in skill (DocumentCracker)."""
 
+import time
 from typing import Any
 
 from app.services.builtin_skills.base import BaseBuiltinSkill
+
+# Max time to wait for async analyze operations (seconds)
+_POLL_TIMEOUT = 120
+_POLL_INTERVAL = 2
 
 
 class DocumentCrackerSkill(BaseBuiltinSkill):
@@ -23,6 +28,23 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
             return self._crack_with_doc_intelligence(client, file_content, config)
         return self._crack_with_content_understanding(client, file_content, config)
 
+    @staticmethod
+    def _poll_operation(client: Any, operation_url: str) -> dict:
+        """Poll an async Azure operation until it completes or times out."""
+        deadline = time.monotonic() + _POLL_TIMEOUT
+        while time.monotonic() < deadline:
+            resp = client.get(operation_url)
+            resp.raise_for_status()
+            body = resp.json()
+            status = body.get("status", "")
+            if status == "succeeded":
+                return body
+            if status == "failed":
+                error_detail = body.get("error", {}).get("message", "Operation failed")
+                raise RuntimeError(f"Analyze operation failed: {error_detail}")
+            time.sleep(_POLL_INTERVAL)
+        raise TimeoutError(f"Analyze operation did not complete within {_POLL_TIMEOUT}s")
+
     def _crack_with_content_understanding(
         self, client: Any, file_content: bytes, config: dict
     ) -> dict:
@@ -36,7 +58,15 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
             json={"base64Source": b64},
         )
         response.raise_for_status()
-        result = response.json()
+
+        # The analyze API is async: 202 with Operation-Location header
+        if response.status_code == 202:
+            operation_url = response.headers.get("Operation-Location", "")
+            if not operation_url:
+                raise RuntimeError("202 response but no Operation-Location header")
+            result = self._poll_operation(client, operation_url)
+        else:
+            result = response.json()
 
         text_parts = []
         for page in result.get("result", {}).get("pages", []):
@@ -56,17 +86,100 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
 
         b64 = base64.b64encode(file_content).decode("utf-8")
         response = client.post(
-            "/documentintelligence/documentModels/prebuilt-read:analyze",
-            params={"api-version": "2024-11-30"},
+            "/documentintelligence/documentModels/prebuilt-layout:analyze",
+            params={
+                "api-version": "2024-11-30",
+                "outputContentFormat": "markdown",
+            },
             json={"base64Source": b64},
         )
         response.raise_for_status()
-        result = response.json()
 
-        content = result.get("analyzeResult", {}).get("content", "")
-        pages = result.get("analyzeResult", {}).get("pages", [])
+        # The analyze API is async: 202 with Operation-Location header
+        if response.status_code == 202:
+            operation_url = response.headers.get("Operation-Location", "")
+            if not operation_url:
+                raise RuntimeError("202 response but no Operation-Location header")
+            result = self._poll_operation(client, operation_url)
+        else:
+            result = response.json()
+
+        analyze = result.get("analyzeResult", {})
+        content = analyze.get("content", "")
+        pages = analyze.get("pages", [])
+        tables = analyze.get("tables", [])
+        figures = analyze.get("figures", [])
+
+        # Extract table HTML representations
+        table_list = []
+        for t in tables:
+            cells = t.get("cells", [])
+            row_count = t.get("rowCount", 0)
+            col_count = t.get("columnCount", 0)
+            grid: list[list[str]] = [["" for _ in range(col_count)] for _ in range(row_count)]
+            for cell in cells:
+                r = cell.get("rowIndex", 0)
+                c = cell.get("columnIndex", 0)
+                if r < row_count and c < col_count:
+                    grid[r][c] = cell.get("content", "")
+            html = "<table border='1'>"
+            for ri, row in enumerate(grid):
+                html += "<tr>"
+                tag = "th" if ri == 0 else "td"
+                for val in row:
+                    html += f"<{tag}>{val}</{tag}>"
+                html += "</tr>"
+            html += "</table>"
+            table_list.append(
+                {
+                    "html": html,
+                    "rowCount": row_count,
+                    "columnCount": col_count,
+                    "boundingRegions": t.get("boundingRegions", []),
+                }
+            )
+
+        # Extract figure info
+        figure_list = []
+        for f in figures:
+            figure_list.append(
+                {
+                    "caption": (f.get("caption") or {}).get("content", ""),
+                    "boundingRegions": f.get("boundingRegions", []),
+                }
+            )
+
+        # Extract selection marks per page
+        selection_marks: list[dict] = []
+        for page in pages:
+            for mark in page.get("selectionMarks", []):
+                selection_marks.append(
+                    {
+                        "page": page.get("pageNumber", 0),
+                        "state": mark.get("state", ""),
+                        "confidence": mark.get("confidence", 0),
+                        "polygon": mark.get("polygon", []),
+                    }
+                )
+
+        # Build page metadata
+        page_meta = []
+        for page in pages:
+            page_meta.append(
+                {
+                    "pageNumber": page.get("pageNumber", 0),
+                    "width": page.get("width", 0),
+                    "height": page.get("height", 0),
+                    "unit": page.get("unit", ""),
+                }
+            )
 
         return {
-            "text": content,
+            "markdown": content,
+            "text": analyze.get("content", ""),
+            "tables": table_list,
+            "figures": figure_list,
+            "selectionMarks": selection_marks,
+            "pages": page_meta,
             "metadata": {"pageCount": len(pages)},
         }

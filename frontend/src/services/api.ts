@@ -47,6 +47,8 @@ export const skillsApi = {
     apiClient.post<SkillTestResult>('/skills/test-code', data).then(r => r.data),
   configure: (id: string, data: { config_values?: Record<string, unknown>; bound_connection_id?: string | null }) =>
     apiClient.put<Skill>(`/skills/${id}/configure`, data).then(r => r.data),
+  getTestFileUrl: (fileId: string) =>
+    `${apiClient.defaults.baseURL}/skills/test-file/${fileId}`,
   uploadTestFile: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

@@ -185,6 +185,8 @@ Make all built-in skills fully executable with Azure resource binding, configura
 - DocumentCracker 默认使用 Azure Content Understanding
 - 可切换为 Azure Document Intelligence
 - 支持 file_id 输入 (PDF/DOCX/HTML 等)
+- Azure Document Intelligence 模式使用 `prebuilt-layout` model + `outputContentFormat=markdown`
+- 返回结构化结果: `markdown`, `text`, `tables` (HTML), `figures`, `selectionMarks`, `pages`, `metadata`
 
 #### Scenario: Utility Skills (4 个, 本地执行)
 
@@ -197,13 +199,38 @@ Make all built-in skills fully executable with Azure resource binding, configura
 
 ### Requirement: Frontend - BuiltinSkillEditor 页面
 
-#### Scenario: 页面布局
+#### Scenario: 页面布局 (标准 2 栏)
 
-- **WHEN** 用户访问 /skills/{id}/configure
+- **WHEN** 用户访问 /skills/{id}/configure (非 DocumentCracker)
 - **THEN** 显示两栏布局:
   - 左栏: Skill 描述 (只读) + Resource Binding + Configuration Form
   - 右栏: Test Input (文本/文件上传) + Test Output
 - **AND** 顶部显示 Back 按钮、Skill 名称 + "(Built-in)" 标签、Save 按钮
+
+#### Scenario: Document Intelligence Studio 布局 (3 栏)
+
+- **WHEN** 用户访问 /skills/{id}/configure (DocumentCracker)
+- **THEN** 显示 3 栏 Document Intelligence Studio 布局:
+  - 左栏 (~160px): 文件上传拖放区 + 已上传文件缩略图 (图片 img、PDF 缩放 iframe、其他文件 icon)
+  - 中栏 (flex): 文档预览 (PDF iframe / 图片 img)
+  - 右栏 (~480px): 分页输出面板
+    - 一级 Tab: Content | Result JSON
+    - Content 下二级 Tab: Markdown | Text | Tables | Figures | Selection marks
+    - Markdown Tab: 使用 react-markdown + rehype-raw 渲染 (支持 HTML table/figure 标签)
+    - Text Tab: 带行号的纯文本
+    - Tables Tab: 渲染 HTML 表格
+    - Figures Tab: figure caption + bounding region 列表
+    - Selection marks Tab: checkbox + 状态 + 置信度
+- **AND** 顶部显示 Back 按钮、Skill 名称 + Built-in 标签、齿轮 (配置) 按钮、Save 按钮
+- **AND** 配置面板 (Resource Binding + Configuration Form) 通过齿轮按钮折叠/展开
+- **AND** 文件上传支持拖放 (drag & drop)
+
+#### Scenario: 文件预览端点
+
+- **WHEN** GET /api/v1/skills/test-file/{file_id}
+- **THEN** 返回已上传文件的原始内容，Content-Type 与上传时一致
+- **AND** 使用 RFC 5987 `filename*=UTF-8''` 编码支持非 ASCII 文件名
+- **AND** 用于 iframe (PDF) 或 img (图片) 预览
 
 #### Scenario: Resource Binding 卡片
 

@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -96,6 +97,25 @@ async def create_skill(body: SkillCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(skill)
     _ensure_skill_venv(skill)
     return SkillResponse.model_validate(skill)
+
+
+@router.get("/test-file/{file_id}")
+async def get_test_file(file_id: str):
+    """Return an uploaded temp file for preview (e.g. PDF in iframe)."""
+    import urllib.parse
+
+    from app.services.temp_file_manager import resolve_temp_file
+
+    file_info = resolve_temp_file(file_id)
+    if not file_info:
+        raise NotFoundException("TestFile", file_id)
+    # Use RFC 5987 encoding for non-ASCII filenames
+    encoded_name = urllib.parse.quote(file_info["filename"])
+    return Response(
+        content=file_info["content"],
+        media_type=file_info["content_type"],
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded_name}"},
+    )
 
 
 @router.get("/{skill_id}", response_model=SkillResponse)

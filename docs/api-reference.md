@@ -249,6 +249,17 @@ Error responses per record (other records still execute):
 }
 ```
 
+### Get Test File (Preview)
+
+```
+GET /skills/test-file/{file_id}
+```
+
+Returns an uploaded temp file for preview (e.g. PDF in iframe, image in img tag).
+Uses RFC 5987 `filename*=UTF-8''` encoding for non-ASCII filenames.
+
+**Response** — binary file content with appropriate `Content-Type` header
+
 ### Test Unsaved Code
 
 ```

@@ -137,11 +137,29 @@ export interface PipelineTemplate {
   nodes: PipelineNode[];
 }
 
+export type DataSourceType =
+  | 'local_upload'
+  | 'azure_blob'
+  | 'azure_adls_gen2'
+  | 'azure_cosmos_db'
+  | 'azure_sql'
+  | 'azure_table'
+  | 'microsoft_onelake'
+  | 'sharepoint'
+  | 'onedrive'
+  | 'onedrive_business'
+  | 'azure_file_storage'
+  | 'azure_queues'
+  | 'service_bus'
+  | 'amazon_s3'
+  | 'dropbox'
+  | 'sftp_ssh';
+
 export interface DataSource {
   id: string;
   name: string;
   description: string | null;
-  source_type: 'local_upload' | 'azure_blob';
+  source_type: DataSourceType;
   connection_config: Record<string, unknown>;
   status: 'active' | 'inactive' | 'error';
   file_count: number;
@@ -149,6 +167,20 @@ export interface DataSource {
   pipeline_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DataSourceTestResult {
+  success: boolean;
+  message: string;
+}
+
+export interface UploadQuotaInfo {
+  total_mb: number;
+  used_mb: number;
+  available_mb: number;
+  retention_days: number;
+  max_file_size_mb: number;
+  temp_dir: string;
 }
 
 export interface Target {

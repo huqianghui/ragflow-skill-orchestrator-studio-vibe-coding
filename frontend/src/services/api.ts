@@ -3,6 +3,7 @@ import type {
   Connection,
   ConnectionTestResult,
   DataSource,
+  DataSourceTestResult,
   PaginatedResponse,
   Pipeline,
   PipelineDebugResult,
@@ -12,6 +13,7 @@ import type {
   Skill,
   SkillTestResult,
   Target,
+  UploadQuotaInfo,
 } from '../types';
 
 const apiClient = axios.create({
@@ -118,6 +120,18 @@ export const dataSourcesApi = {
     apiClient.put<DataSource>(`/data-sources/${id}`, data).then(r => r.data),
   delete: (id: string) =>
     apiClient.delete(`/data-sources/${id}`),
+  test: (id: string) =>
+    apiClient.post<DataSourceTestResult>(`/data-sources/${id}/test`).then(r => r.data),
+  upload: (dataSourceId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('data_source_id', dataSourceId);
+    return apiClient.post<{ filename: string; size: number; path: string }>(
+      '/data-sources/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }
+    ).then(r => r.data);
+  },
+  getQuota: () =>
+    apiClient.get<UploadQuotaInfo>('/data-sources/upload-quota').then(r => r.data),
 };
 
 // --- Targets ---

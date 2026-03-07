@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     secret_encryption_key: str = "VTpw28GEqsSisV5yam23f1krl5oMvygG8iDHB4wUDho="
     # Root path for skill virtual environments
     skill_venvs_root: str = "./data/skill_venvs"
+    # Local upload temp directory and quota
+    upload_temp_dir: str = "./data/uploads/tmp"
+    upload_total_quota_mb: int = 1024
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

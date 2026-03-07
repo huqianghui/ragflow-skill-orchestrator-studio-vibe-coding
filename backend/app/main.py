@@ -34,6 +34,15 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.warning("Failed to initialize base venv (non-fatal)", exc_info=True)
 
+    # Cleanup expired local upload files on startup
+    try:
+        from app.services.upload_manager import UploadManager
+
+        upload_mgr = UploadManager()
+        upload_mgr.cleanup_expired()
+    except Exception:
+        logger.warning("Failed to cleanup uploads on startup (non-fatal)", exc_info=True)
+
     # Start temp file cleanup task
     async def _cleanup_loop():
         from app.services.temp_file_manager import cleanup_expired_files

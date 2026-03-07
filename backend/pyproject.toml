@@ -17,6 +17,17 @@ dependencies = [
     "alembic>=1.13",
     "cryptography>=42.0",
     "python-multipart>=0.0.7",
+    # Azure data source SDKs (default)
+    "azure-storage-blob>=12.0",
+    "azure-storage-file-datalake>=12.0",
+    "azure-cosmos>=4.0",
+    "azure-data-tables>=12.0",
+    "azure-storage-file-share>=12.0",
+    "azure-storage-queue>=12.0",
+    "azure-servicebus>=7.0",
+    "azure-identity>=1.0",
+    "pyodbc>=5.0",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +38,10 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.3",
 ]
+aws = ["boto3>=1.28"]
+dropbox = ["dropbox>=12.0"]
+sftp = ["paramiko>=3.0"]
+all = ["boto3>=1.28", "dropbox>=12.0", "paramiko>=3.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]

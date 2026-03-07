@@ -60,15 +60,17 @@ backend/
     api/           # FastAPI 路由: health, skills, connections, pipelines, runs, targets, data_sources
     models/        # SQLAlchemy ORM 模型
     schemas/       # Pydantic 请求/响应 schema
-    services/      # 业务逻辑层
-    utils/         # 工具类 (加密, skill runner 等)
-    data/          # 内置 skill 定义, seed 数据
+    services/      # 业务逻辑层 (skill_runner, venv_manager, upload_manager, data_source_tester,
+                   #   target_tester, target_writer, target_index_manager, target_schema_discovery,
+                   #   mapping_engine, skill_seeder, skill_context, temp_file_manager)
+    utils/         # 工具类 (encryption, exceptions, pagination)
+    data/          # 内置数据定义 (builtin_skills, pipeline_templates, pipeline_defaults)
     config.py      # pydantic-settings 配置
     database.py    # 异步引擎 & session 工厂
     main.py        # FastAPI app, lifespan, 路由注册
   alembic/         # 数据库迁移脚本
   tests/           # pytest 测试
-  data/            # 运行时数据 (app.db, venvs/) — 不提交
+  data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
 frontend/
@@ -76,9 +78,9 @@ frontend/
     pages/         # 路由级页面组件
     components/    # 可复用 UI 组件
     services/      # API 客户端 (axios)
-    hooks/         # 自定义 React hooks
     types/         # TypeScript 类型定义
-    styles/        # 样式文件
+  public/
+    icons/         # SVG 图标 (data-sources/, targets/)
 
 openspec/          # 产品规格 (详见上方文档分层体系)
 ```

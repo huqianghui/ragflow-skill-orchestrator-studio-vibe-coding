@@ -84,7 +84,9 @@
   - 清理过期上传临时文件 (UploadManager.cleanup_expired)
 - 应用关闭时释放数据库连接
 
-### Requirement: 中间结果清理 [Phase 2]
+### Requirement: 临时文件与中间结果清理 [已部分实现]
 
 - cleanup_retention_days = 7 天
-- 每日凌晨 2:00 删除过期 Run 中间结果
+- **已实现**: 启动时清理过期上传临时文件 (UploadManager.cleanup_expired)
+- **已实现**: 每 10 分钟周期清理过期临时文件 (temp_file_manager.cleanup_expired_files)
+- [待实现] 定期删除过期 Run 中间结果

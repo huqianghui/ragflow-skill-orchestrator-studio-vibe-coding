@@ -17,7 +17,10 @@ specs:
   - connections/spec.md
   - skill-library-ui/spec.md
   - skill-editor-ui/spec.md
+  - executable-builtin-skills/spec.md
   - pipelines/spec.md
+  - pipeline-orchestration/spec.md
+  - pipeline-editor-ui/spec.md
   - datasources/spec.md
   - runs/spec.md
   - targets/spec.md
@@ -31,15 +34,14 @@ decisions:
     - config_template
     - python_code
   skill_discovery: marketplace/library + pipeline templates
-  datasources:
-    - local_file_upload
-    - azure_blob_storage
-  output_phase1: azure_ai_search_index
-  output_phase2:
+  datasources: 16 种类型（参见 datasources/spec.md）
+  output_targets:
+    - azure_ai_search
+    - azure_blob
+    - cosmosdb_gremlin
+    - neo4j
     - mysql
     - postgresql
-    - cosmosdb
-    - neo4j
   execution_modes:
     - sync   # small files
     - async  # large batches

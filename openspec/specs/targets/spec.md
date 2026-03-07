@@ -35,7 +35,7 @@ Target 字段：
 
 每种类型的 `connection_config` 字段定义（标记 `*` 为必填，`🔒` 为 secret）：
 
-**azure_ai_search**: `endpoint`*, `api_key`*🔒, `index_name`*
+**azure_ai_search**: `endpoint`*, `api_key`*🔒, `index_name`
 **azure_blob**: `connection_string`*🔒, `container_name`*, `output_path_template`, `content_format`(默认 json)
 **cosmosdb_gremlin**: `endpoint`*, `primary_key`*🔒, `database`*, `graph`*, `partition_key`*
 **neo4j**: `uri`*, `username`*, `password`*🔒, `database`(默认 neo4j)

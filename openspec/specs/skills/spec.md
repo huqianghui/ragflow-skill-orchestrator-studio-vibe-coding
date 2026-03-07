@@ -23,7 +23,23 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
   - required_resource_types (JSON 数组, builtin skill 所需连接类型, 可选)
   - bound_connection_id (字符串, 用户绑定的 Connection ID, 可选)
   - config_values (JSON 对象, 用户配置的参数值, 可选)
+  - **pipeline_io** (JSON 对象, Pipeline I/O 默认值, 可选) — **新增字段**
   - created_at / updated_at (时间戳, 自动生成)
+
+- **AND** pipeline_io 结构为:
+  ```json
+  {
+    "default_context": "/document",
+    "inputs": [
+      {"name": "text", "source": "/document/content", "description": "Input text"}
+    ],
+    "outputs": [
+      {"name": "chunks", "targetName": "chunks", "description": "Text chunks array"}
+    ]
+  }
+  ```
+- **AND** pipeline_io 为 null 时表示该 Skill 暂不支持在 Pipeline 中使用
+- **AND** 所有 16 个内置 Skill 的 pipeline_io 在播种时设置
 
 ### Requirement: Skill CRUD 操作 [Phase 1 - 已实现]
 
@@ -98,6 +114,12 @@ Skill 是 Pipeline 中的最小处理单元，对标 Azure AI Skillset 中的 Sk
 - **THEN** 比对数据库中已有的 builtin Skill name 集合
 - **AND** 仅插入缺失的内置 Skill，不更新已存在的
 - **AND** 记录日志: "Seeded N built-in skills"
+
+#### Scenario: 播种数据包含 pipeline_io
+
+- **GIVEN** BUILTIN_SKILLS 定义列表
+- **THEN** 每个 Skill 定义包含 `pipeline_io` 字段
+- **AND** pipeline_io 包含该 Skill 在 Pipeline 中的默认 context、inputs、outputs 映射
 
 ### Requirement: 内置 Skill 列表 [Phase 1 - 已实现]
 

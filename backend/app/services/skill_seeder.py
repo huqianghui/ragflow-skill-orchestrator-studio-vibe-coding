@@ -11,25 +11,44 @@ from app.models.skill import Skill
 logger = logging.getLogger(__name__)
 
 
+_SYNC_FIELDS = ("description", "config_schema", "required_resource_types", "pipeline_io")
+
+
 async def seed_builtin_skills(db: AsyncSession) -> None:
-    """Insert missing built-in skills. Idempotent — safe to call on every startup."""
-    result = await db.execute(select(Skill.name).where(Skill.is_builtin.is_(True)))
-    existing_names: set[str] = {row[0] for row in result.all()}
+    """Insert or update built-in skills. Idempotent — safe to call on every startup.
 
-    to_insert = [
-        Skill(**skill_def)
-        for skill_def in BUILTIN_SKILLS
-        if skill_def["name"] not in existing_names
-    ]
+    New skills are inserted; existing skills get their metadata fields synced
+    so that code-level changes (e.g. new pipeline_io defaults) are reflected
+    in the database without requiring a manual migration.
+    """
+    result = await db.execute(select(Skill).where(Skill.is_builtin.is_(True)))
+    existing: dict[str, Skill] = {s.name: s for s in result.scalars().all()}
 
-    if not to_insert:
-        logger.info("All %d built-in skills already present, nothing to seed.", len(BUILTIN_SKILLS))
-        return
+    inserted = 0
+    updated = 0
 
-    db.add_all(to_insert)
-    await db.commit()
+    for skill_def in BUILTIN_SKILLS:
+        name = skill_def["name"]
+        if name not in existing:
+            db.add(Skill(**skill_def))
+            inserted += 1
+        else:
+            skill = existing[name]
+            changed = False
+            for field in _SYNC_FIELDS:
+                new_val = skill_def.get(field)
+                if getattr(skill, field) != new_val:
+                    setattr(skill, field, new_val)
+                    changed = True
+            if changed:
+                updated += 1
+
+    if inserted or updated:
+        await db.commit()
+
     logger.info(
-        "Seeded %d built-in skills (total defined: %d).",
-        len(to_insert),
+        "Built-in skills: %d inserted, %d updated, %d total defined.",
+        inserted,
+        updated,
         len(BUILTIN_SKILLS),
     )

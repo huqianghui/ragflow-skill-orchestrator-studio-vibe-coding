@@ -1,13 +1,21 @@
-from fastapi import APIRouter, Depends, status
+import asyncio
+import logging
+
+from fastapi import APIRouter, Depends, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.models.pipeline import Pipeline
+from app.models.skill import Skill
 from app.schemas.common import PaginatedResponse
 from app.schemas.pipeline import PipelineCreate, PipelineResponse, PipelineUpdate
-from app.utils.exceptions import NotFoundException
+from app.schemas.skill import SkillResponse
+from app.utils.exceptions import NotFoundException, ValidationException
 from app.utils.pagination import paginate, pagination_params
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
@@ -37,6 +45,24 @@ async def create_pipeline(body: PipelineCreate, db: AsyncSession = Depends(get_d
     await db.commit()
     await db.refresh(pipeline)
     return PipelineResponse.model_validate(pipeline)
+
+
+# -- Static routes MUST be defined before /{pipeline_id} --
+
+
+@router.get("/available-skills", response_model=list[SkillResponse])
+async def get_available_skills(db: AsyncSession = Depends(get_db)):
+    """Return all skills with their pipeline_io metadata."""
+    result = await db.execute(select(Skill).order_by(Skill.name))
+    return [SkillResponse.model_validate(s) for s in result.scalars().all()]
+
+
+@router.get("/templates")
+async def get_pipeline_templates():
+    """Return available pipeline templates."""
+    from app.data.pipeline_templates import PIPELINE_TEMPLATES
+
+    return PIPELINE_TEMPLATES
 
 
 @router.get("/{pipeline_id}", response_model=PipelineResponse)
@@ -75,3 +101,48 @@ async def delete_pipeline(pipeline_id: str, db: AsyncSession = Depends(get_db)):
 
     await db.delete(pipeline)
     await db.commit()
+
+
+@router.post("/{pipeline_id}/debug")
+async def debug_pipeline(
+    pipeline_id: str,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a file and execute the pipeline for debugging."""
+    result = await db.execute(select(Pipeline).where(Pipeline.id == pipeline_id))
+    pipeline = result.scalar_one_or_none()
+    if not pipeline:
+        raise NotFoundException("Pipeline", pipeline_id)
+
+    nodes = (pipeline.graph_data or {}).get("nodes", [])
+    if not nodes:
+        raise ValidationException("Pipeline has no nodes to execute")
+
+    file_content = await file.read()
+    file_name = file.filename or "uploaded_file"
+
+    from app.services.pipeline.runner import PipelineRunner
+
+    runner = PipelineRunner()
+    timeout = get_settings().sync_execution_timeout_s
+
+    pipeline_dict = {
+        "graph_data": pipeline.graph_data,
+    }
+
+    try:
+        debug_result = await asyncio.wait_for(
+            runner.execute(pipeline_dict, file_content, file_name, db),
+            timeout=timeout,
+        )
+    except TimeoutError:
+        debug_result = {
+            "status": "partial",
+            "total_execution_time_ms": timeout * 1000,
+            "enrichment_tree": {},
+            "node_results": [],
+            "error": f"Execution timed out after {timeout}s",
+        }
+
+    return debug_result

@@ -1,5 +1,13 @@
 """Built-in skill definitions seeded on application startup."""
 
+from app.data.pipeline_defaults import PIPELINE_DEFAULTS
+
+
+def _pio(name: str) -> dict | None:
+    """Get pipeline_io defaults for a skill by name."""
+    return PIPELINE_DEFAULTS.get(name)
+
+
 BUILTIN_SKILLS: list[dict] = [
     {
         "name": "DocumentCracker",
@@ -32,6 +40,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("DocumentCracker"),
     },
     {
         "name": "TextSplitter",
@@ -68,6 +77,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("TextSplitter"),
     },
     {
         "name": "TextMerger",
@@ -90,6 +100,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("TextMerger"),
     },
     {
         "name": "LanguageDetector",
@@ -112,6 +123,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("LanguageDetector"),
     },
     {
         "name": "EntityRecognizer",
@@ -140,6 +152,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("EntityRecognizer"),
     },
     {
         "name": "EntityLinker",
@@ -162,6 +175,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("EntityLinker"),
     },
     {
         "name": "KeyPhraseExtractor",
@@ -184,6 +198,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("KeyPhraseExtractor"),
     },
     {
         "name": "SentimentAnalyzer",
@@ -207,6 +222,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("SentimentAnalyzer"),
     },
     {
         "name": "PIIDetector",
@@ -248,6 +264,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("PIIDetector"),
     },
     {
         "name": "TextTranslator",
@@ -270,6 +287,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("TextTranslator"),
     },
     {
         "name": "OCR",
@@ -299,6 +317,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("OCR"),
     },
     {
         "name": "ImageAnalyzer",
@@ -327,6 +346,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("ImageAnalyzer"),
     },
     {
         "name": "TextEmbedder",
@@ -356,6 +376,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("TextEmbedder"),
     },
     {
         "name": "Shaper",
@@ -384,6 +405,7 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("Shaper"),
     },
     {
         "name": "Conditional",
@@ -417,6 +439,7 @@ BUILTIN_SKILLS: list[dict] = [
             },
             "required": ["condition_field"],
         },
+        "pipeline_io": _pio("Conditional"),
     },
     {
         "name": "GenAIPrompt",
@@ -456,5 +479,6 @@ BUILTIN_SKILLS: list[dict] = [
                 },
             },
         },
+        "pipeline_io": _pio("GenAIPrompt"),
     },
 ]

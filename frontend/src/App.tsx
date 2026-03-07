@@ -33,7 +33,7 @@ export default function App() {
             <Route path="/skills/:id/configure" element={<BuiltinSkillEditor />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/pipelines" element={<Pipelines />} />
-            <Route path="/pipelines/:id/edit" element={<PipelineEditor />} />
+            <Route path="/pipelines/:id" element={<PipelineEditor />} />
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/targets" element={<Targets />} />
             <Route path="/runs" element={<RunHistory />} />

@@ -49,6 +49,7 @@ class SkillResponse(BaseModel):
     required_resource_types: list[str] | None
     bound_connection_id: str | None
     config_values: dict | None
+    pipeline_io: dict | None
     created_at: datetime
     updated_at: datetime
 

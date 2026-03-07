@@ -5,6 +5,8 @@ import type {
   DataSource,
   PaginatedResponse,
   Pipeline,
+  PipelineDebugResult,
+  PipelineTemplate,
   PreloadedImports,
   Run,
   Skill,
@@ -90,6 +92,18 @@ export const pipelinesApi = {
     apiClient.put<Pipeline>(`/pipelines/${id}`, data).then(r => r.data),
   delete: (id: string) =>
     apiClient.delete(`/pipelines/${id}`),
+  getAvailableSkills: () =>
+    apiClient.get<Skill[]>('/pipelines/available-skills').then(r => r.data),
+  getTemplates: () =>
+    apiClient.get<PipelineTemplate[]>('/pipelines/templates').then(r => r.data),
+  debug: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post<PipelineDebugResult>(
+      `/pipelines/${id}/debug`, formData,
+      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 }
+    ).then(r => r.data);
+  },
 };
 
 // --- Data Sources ---

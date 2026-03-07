@@ -24,3 +24,6 @@ class Skill(BaseModel):
     required_resource_types: Mapped[dict | None] = mapped_column(JSON, default=None)
     bound_connection_id: Mapped[str | None] = mapped_column(String, default=None)
     config_values: Mapped[dict | None] = mapped_column(JSON, default=None)
+
+    # pipeline I/O defaults (context, inputs, outputs)
+    pipeline_io: Mapped[dict | None] = mapped_column(JSON, default=None)

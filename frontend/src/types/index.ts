@@ -1,5 +1,23 @@
 // === Core Models ===
 
+export interface PipelineIOInput {
+  name: string;
+  source: string;
+  description?: string;
+}
+
+export interface PipelineIOOutput {
+  name: string;
+  targetName: string;
+  description?: string;
+}
+
+export interface PipelineIO {
+  default_context: string;
+  inputs: PipelineIOInput[];
+  outputs: PipelineIOOutput[];
+}
+
 export interface Skill {
   id: string;
   name: string;
@@ -14,6 +32,7 @@ export interface Skill {
   required_resource_types: string[] | null;
   bound_connection_id: string | null;
   config_values: Record<string, unknown> | null;
+  pipeline_io: PipelineIO | null;
   created_at: string;
   updated_at: string;
 }
@@ -56,17 +75,66 @@ export interface PreloadedImports {
   third_party: string[];
 }
 
+export interface PipelineNode {
+  id: string;
+  skill_name: string;
+  label: string;
+  position: number;
+  context: string;
+  inputs: PipelineIOInput[];
+  outputs: PipelineIOOutput[];
+  config_overrides: Record<string, unknown>;
+  bound_connection_id?: string;
+  x?: number;
+  y?: number;
+}
+
+export interface PipelineEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
+
 export interface Pipeline {
   id: string;
   name: string;
   description: string | null;
   status: 'draft' | 'validated' | 'active' | 'archived';
   graph_data: {
-    nodes: unknown[];
-    edges: unknown[];
+    nodes: PipelineNode[];
+    edges?: PipelineEdge[];
   };
   created_at: string;
   updated_at: string;
+}
+
+export interface NodeExecutionResult {
+  node_id: string;
+  skill_name: string;
+  label: string;
+  status: 'success' | 'error';
+  execution_time_ms: number;
+  records_processed: number;
+  input_snapshots: Record<string, unknown>[];
+  output_snapshots: Record<string, unknown>[];
+  errors: Array<{ message: string; traceback?: string }>;
+  warnings: string[];
+}
+
+export interface PipelineDebugResult {
+  status: 'success' | 'partial' | 'error';
+  total_execution_time_ms: number;
+  enrichment_tree: Record<string, unknown>;
+  node_results: NodeExecutionResult[];
+  error?: string;
+}
+
+export interface PipelineTemplate {
+  name: string;
+  description: string;
+  nodes: PipelineNode[];
 }
 
 export interface DataSource {

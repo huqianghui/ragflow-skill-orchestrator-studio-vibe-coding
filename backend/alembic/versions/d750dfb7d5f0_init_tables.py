@@ -85,6 +85,7 @@ def upgrade() -> None:
         sa.Column("required_resource_types", sa.JSON(), nullable=True),
         sa.Column("bound_connection_id", sa.String(), nullable=True),
         sa.Column("config_values", sa.JSON(), nullable=True),
+        sa.Column("pipeline_io", sa.JSON(), nullable=True),
         sa.Column("id", sa.String(), nullable=False),
         sa.Column(
             "created_at",

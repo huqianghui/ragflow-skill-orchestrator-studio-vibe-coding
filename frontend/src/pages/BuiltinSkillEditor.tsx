@@ -31,8 +31,9 @@ import rehypeRaw from 'rehype-raw';
 import type { Connection, Skill, SkillTestResult } from '../types';
 import { connectionsApi, skillsApi } from '../services/api';
 import ConfigSchemaForm from '../components/ConfigSchemaForm';
+import PageHeader from '../components/PageHeader';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const RESOURCE_TYPE_LABELS: Record<string, string> = {
   azure_ai_foundry: 'Azure AI Foundry (multi-service)',
@@ -232,28 +233,25 @@ export default function BuiltinSkillEditor() {
   if (isDocCracker) {
     return (
       <div style={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
-        {/* Header bar */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 8, flexShrink: 0,
-        }}>
-          <Space>
-            <Button onClick={() => navigate('/skills')}>Back</Button>
-            <Title level={4} style={{ margin: 0 }}>{skill.name}</Title>
-            <Tag color="blue">Built-in</Tag>
-          </Space>
-          <Space>
-            <Tooltip title="Configuration">
-              <Button
-                icon={<SettingOutlined />}
-                onClick={() => setShowConfig(!showConfig)}
-                type={showConfig ? 'primary' : 'default'}
-              />
-            </Tooltip>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-              Save
-            </Button>
-          </Space>
+        <div style={{ flexShrink: 0, marginBottom: 8 }}>
+          <PageHeader
+            title={<>{skill.name} <Tag color="blue">Built-in</Tag></>}
+            onBack={() => navigate('/skills')}
+            extra={
+              <Space>
+                <Tooltip title="Configuration">
+                  <Button
+                    icon={<SettingOutlined />}
+                    onClick={() => setShowConfig(!showConfig)}
+                    type={showConfig ? 'primary' : 'default'}
+                  />
+                </Tooltip>
+                <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                  Save
+                </Button>
+              </Space>
+            }
+          />
         </div>
 
         {/* Config panel (collapsible) */}
@@ -798,21 +796,16 @@ export default function BuiltinSkillEditor() {
   // ---------- Standard 2-column layout for non-DocumentCracker skills ----------
   return (
     <div style={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
-      {/* Header bar */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: 16, flexShrink: 0,
-      }}>
-        <Space>
-          <Button onClick={() => navigate('/skills')}>Back</Button>
-          <Title level={3} style={{ margin: 0 }}>
-            {skill.name}
-          </Title>
-          <Tag color="blue">Built-in</Tag>
-        </Space>
-        <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-          Save
-        </Button>
+      <div style={{ flexShrink: 0 }}>
+        <PageHeader
+          title={<>{skill.name} <Tag color="blue">Built-in</Tag></>}
+          onBack={() => navigate('/skills')}
+          extra={
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+              Save
+            </Button>
+          }
+        />
       </div>
 
       {/* Main content: left config + right test */}

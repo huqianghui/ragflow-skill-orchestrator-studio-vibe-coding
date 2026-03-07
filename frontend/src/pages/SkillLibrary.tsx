@@ -13,7 +13,6 @@ import {
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd';
 import {
   ApiOutlined,
@@ -42,8 +41,9 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Skill } from '../types';
 import { skillsApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
+import PageHeader from '../components/PageHeader';
+import ListToolbar from '../components/ListToolbar';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 
 const SKILL_TYPE_OPTIONS = [
@@ -335,41 +335,38 @@ export default function SkillLibrary() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
-          Skill Library
-        </Title>
-        <Space>
-          <Button type="primary" icon={<CodeOutlined />} onClick={() => navigate('/skills/new')}>
-            New Python Skill
-          </Button>
-          <Button icon={<PlusOutlined />} onClick={openCreateForm}>
-            New Skill
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+        title="Skill Library"
+        extra={
+          <Space>
+            <Button type="primary" icon={<CodeOutlined />} onClick={() => navigate('/skills/new')}>
+              New Python Skill
+            </Button>
+            <Button icon={<PlusOutlined />} onClick={openCreateForm}>
+              New Skill
+            </Button>
+          </Space>
+        }
+      />
 
       <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search by name or description"
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => !e.target.value && setSearchText('')}
-            style={{ width: 300 }}
-          />
-          <Select
-            mode="multiple"
-            placeholder="Filter by type"
-            allowClear
-            options={[
-              { label: 'Built-in', value: 'builtin' },
-              ...SKILL_TYPE_OPTIONS,
-            ]}
-            onChange={setTypeFilter}
-            style={{ minWidth: 200 }}
-          />
-        </Space>
+        <ListToolbar
+          searchPlaceholder="Search by name or description"
+          onSearch={setSearchText}
+          filters={
+            <Select
+              mode="multiple"
+              placeholder="Filter by type"
+              allowClear
+              options={[
+                { label: 'Built-in', value: 'builtin' },
+                ...SKILL_TYPE_OPTIONS,
+              ]}
+              onChange={setTypeFilter}
+              style={{ minWidth: 200 }}
+            />
+          }
+        />
 
         <Table<Skill>
           columns={columns}

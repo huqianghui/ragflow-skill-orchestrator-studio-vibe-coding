@@ -12,15 +12,14 @@ import {
   Switch,
   Table,
   Tag,
-  Typography,
 } from 'antd';
 import { PlusOutlined, ApiOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Connection } from '../types';
 import { connectionsApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
-
-const { Title } = Typography;
+import PageHeader from '../components/PageHeader';
+import ListToolbar from '../components/ListToolbar';
 
 const CONNECTION_TYPES = [
   { label: 'Azure OpenAI', value: 'azure_openai' },
@@ -335,25 +334,20 @@ export default function Connections() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
-          Connections
-        </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateForm}>
-          New Connection
-        </Button>
-      </div>
+      <PageHeader
+        title="Connections"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateForm}>
+            New Connection
+          </Button>
+        }
+      />
 
       <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search by name or description"
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => !e.target.value && setSearchText('')}
-            style={{ width: 300 }}
-          />
-        </Space>
+        <ListToolbar
+          searchPlaceholder="Search by name or description"
+          onSearch={setSearchText}
+        />
 
         <Table<Connection>
           columns={columns}

@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
+import { getThemeByKey } from './themes';
+import { useThemeStore } from './stores/themeStore';
 import AppLayout from './components/AppLayout';
 import Dashboard from './pages/Dashboard';
 import SkillLibrary from './pages/SkillLibrary';
@@ -16,15 +18,11 @@ import RunHistory from './pages/RunHistory';
 import Settings from './pages/Settings';
 
 export default function App() {
+  const { themeKey } = useThemeStore();
+  const currentTheme = getThemeByKey(themeKey);
+
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: '#1677ff',
-          borderRadius: 6,
-        },
-      }}
-    >
+    <ConfigProvider theme={currentTheme.themeConfig}>
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>

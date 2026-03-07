@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input, message, Popconfirm, Space, Table, Tag, Typography } from 'antd';
+import { Button, Card, message, Popconfirm, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Target, TargetType } from '../types';
 import { targetsApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
-
-const { Title } = Typography;
+import PageHeader from '../components/PageHeader';
+import ListToolbar from '../components/ListToolbar';
 
 const TYPE_ICONS: Record<TargetType, string> = {
   azure_ai_search: '/icons/targets/azure-ai-search.svg',
@@ -181,22 +181,19 @@ export default function Targets() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Output Targets</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/targets/new')}>
-          New Target
-        </Button>
-      </div>
+      <PageHeader
+        title="Output Targets"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/targets/new')}>
+            New Target
+          </Button>
+        }
+      />
       <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search by name"
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => !e.target.value && setSearchText('')}
-            style={{ width: 300 }}
-          />
-        </Space>
+        <ListToolbar
+          searchPlaceholder="Search by name"
+          onSearch={setSearchText}
+        />
 
         <Table<Target>
           columns={columns}

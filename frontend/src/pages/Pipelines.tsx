@@ -9,8 +9,10 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Pipeline, PipelineTemplate } from '../types';
 import { pipelinesApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
+import PageHeader from '../components/PageHeader';
+import ListToolbar from '../components/ListToolbar';
 
-const { Title, Paragraph } = Typography;
+const { Paragraph } = Typography;
 
 export default function Pipelines() {
   const navigate = useNavigate();
@@ -182,22 +184,19 @@ export default function Pipelines() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Pipelines</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openNewModal}>
-          New Pipeline
-        </Button>
-      </div>
+      <PageHeader
+        title="Pipelines"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openNewModal}>
+            New Pipeline
+          </Button>
+        }
+      />
       <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search by name or description"
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => !e.target.value && setSearchText('')}
-            style={{ width: 300 }}
-          />
-        </Space>
+        <ListToolbar
+          searchPlaceholder="Search by name or description"
+          onSearch={setSearchText}
+        />
 
         <Table<Pipeline>
           columns={columns}

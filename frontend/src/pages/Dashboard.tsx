@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Spin, Tag, Typography } from 'antd';
+import { Card, Spin, Tag, Typography, theme } from 'antd';
 import {
   ApiOutlined,
   DatabaseOutlined,
@@ -182,6 +182,8 @@ export default function Dashboard() {
     [],
   );
 
+  const { token } = theme.useToken();
+
   if (loading) {
     return <Spin style={{ display: 'block', margin: '120px auto' }} size="large" />;
   }
@@ -264,7 +266,7 @@ export default function Dashboard() {
                 >
                   <div style={{
                     width: 32, height: 4, borderRadius: 2,
-                    background: '#d9d9d9',
+                    background: token.colorBorderSecondary,
                   }} />
                 </div>
 

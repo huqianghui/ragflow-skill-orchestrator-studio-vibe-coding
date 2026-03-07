@@ -11,15 +11,14 @@ import {
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataSource, DataSourceType } from '../types';
 import { dataSourcesApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
-
-const { Title } = Typography;
+import PageHeader from '../components/PageHeader';
+import ListToolbar from '../components/ListToolbar';
 
 // ── Type metadata ──
 
@@ -289,23 +288,20 @@ export default function DataSources() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>Data Sources</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/data-sources/new')}>
-          New Data Source
-        </Button>
-      </div>
+      <PageHeader
+        title="Data Sources"
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/data-sources/new')}>
+            New Data Source
+          </Button>
+        }
+      />
 
       <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Input.Search
-            placeholder="Search by name"
-            allowClear
-            onSearch={setSearchText}
-            onChange={(e) => !e.target.value && setSearchText('')}
-            style={{ width: 300 }}
-          />
-        </Space>
+        <ListToolbar
+          searchPlaceholder="Search by name"
+          onSearch={setSearchText}
+        />
 
         <Table<DataSource>
           columns={columns}

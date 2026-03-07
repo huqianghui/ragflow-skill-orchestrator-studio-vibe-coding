@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Button, Card, Empty, Input, Modal, Select, Space, Spin,
-  Tag, Tooltip, Typography, Upload, message,
+  Tag, Tooltip, Typography, Upload, message, theme,
 } from 'antd';
 import {
   ArrowLeftOutlined, BugOutlined, CheckCircleFilled, CloseCircleFilled,
@@ -57,27 +57,29 @@ type SkillNodeData = {
 };
 
 function DocumentNode({ data }: NodeProps<RFNode<DocNodeData>>) {
+  const { token: t } = theme.useToken();
   return (
     <div style={{
-      background: '#fff', border: '2px solid #d9d9d9', borderRadius: 8,
+      background: t.colorBgContainer, border: `2px solid ${t.colorBorderSecondary}`, borderRadius: 8,
       padding: '12px 16px', minWidth: 140, textAlign: 'center',
     }}>
-      <FileTextOutlined style={{ fontSize: 24, color: '#1677ff', display: 'block' }} />
+      <FileTextOutlined style={{ fontSize: 24, color: t.colorPrimary, display: 'block' }} />
       <div style={{ fontWeight: 600, marginTop: 4, fontSize: 13 }}>{data.label}</div>
-      <Handle type="source" position={Position.Right} style={{ background: '#1677ff' }} />
+      <Handle type="source" position={Position.Right} style={{ background: t.colorPrimary }} />
     </div>
   );
 }
 
 function SkillNode({ data, selected }: NodeProps<RFNode<SkillNodeData>>) {
+  const { token: t } = theme.useToken();
   return (
     <div style={{
-      background: '#fff',
-      border: `2px solid ${selected ? '#1677ff' : '#d9d9d9'}`,
+      background: t.colorBgContainer,
+      border: `2px solid ${selected ? t.colorPrimary : t.colorBorderSecondary}`,
       borderRadius: 8, padding: '10px 14px', minWidth: NODE_WIDTH,
-      boxShadow: selected ? '0 0 0 2px rgba(22,119,255,0.2)' : 'none',
+      boxShadow: selected ? `0 0 0 2px ${t.colorPrimaryBg}` : 'none',
     }}>
-      <Handle type="target" position={Position.Left} style={{ background: '#1677ff' }} />
+      <Handle type="target" position={Position.Left} style={{ background: t.colorPrimary }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
         <Tag color="blue" style={{ margin: 0 }}>#{data.position + 1}</Tag>
         <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>
@@ -88,14 +90,14 @@ function SkillNode({ data, selected }: NodeProps<RFNode<SkillNodeData>>) {
         </Tag>
       </div>
       {data.label !== data.skillName && (
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>{data.label}</div>
+        <div style={{ fontSize: 12, color: t.colorTextSecondary, marginBottom: 2 }}>{data.label}</div>
       )}
       {data.connectionId && (
-        <div style={{ fontSize: 11, color: '#999' }}>
+        <div style={{ fontSize: 11, color: t.colorTextTertiary }}>
           <LinkOutlined style={{ marginRight: 4 }} />{data.connectionId}
         </div>
       )}
-      <Handle type="source" position={Position.Right} style={{ background: '#1677ff' }} />
+      <Handle type="source" position={Position.Right} style={{ background: t.colorPrimary }} />
     </div>
   );
 }
@@ -383,6 +385,7 @@ export default function PipelineEditor() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = searchParams.get('mode') === 'debug' ? 'debug' : 'edit';
+  const { token } = theme.useToken();
 
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [nodes, setNodes] = useState<PipelineNode[]>([]);
@@ -552,8 +555,8 @@ export default function PipelineEditor() {
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
       {/* Top bar */}
       <div style={{
-        padding: '8px 16px', borderBottom: '1px solid #f0f0f0',
-        display: 'flex', alignItems: 'center', gap: 12, background: '#fff',
+        padding: '8px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        display: 'flex', alignItems: 'center', gap: 12, background: token.colorBgContainer,
       }}>
         <Button icon={<ArrowLeftOutlined />} type="text" onClick={() => navigate('/pipelines')} />
         <Title level={4} style={{ margin: 0, flex: 1 }}>{pipeline.name}</Title>
@@ -651,6 +654,7 @@ function EditMode({
   removeNode: (id: string) => void;
   setNodes: React.Dispatch<React.SetStateAction<PipelineNode[]>>;
 }) {
+  const { token: editToken } = theme.useToken();
   const [sidebarTab, setSidebarTab] = useState<'skills' | 'config'>('skills');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const reactFlowInstance = useReactFlow();
@@ -894,7 +898,7 @@ function EditMode({
       <div style={{
         width: sidebarCollapsed ? 40 : 380,
         minWidth: sidebarCollapsed ? 40 : 380,
-        borderLeft: '1px solid #f0f0f0', background: '#fafafa',
+        borderLeft: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgLayout,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         transition: 'width 0.2s, min-width 0.2s',
       }}>
@@ -903,8 +907,8 @@ function EditMode({
           onClick={() => setSidebarCollapsed(prev => !prev)}
           style={{
             padding: '8px 0', textAlign: 'center', cursor: 'pointer',
-            borderBottom: '1px solid #f0f0f0', background: '#fff',
-            color: '#999', fontSize: 14,
+            borderBottom: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgContainer,
+            color: editToken.colorTextSecondary, fontSize: 14,
           }}
         >
           {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -914,16 +918,16 @@ function EditMode({
           <>
             {/* Tab bar */}
             <div style={{
-              display: 'flex', borderBottom: '1px solid #f0f0f0', background: '#fff',
+              display: 'flex', borderBottom: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgContainer,
             }}>
               <div
                 onClick={() => setSidebarTab('skills')}
                 style={{
                   flex: 1, padding: '10px 0', textAlign: 'center', cursor: 'pointer',
                   fontWeight: sidebarTab === 'skills' ? 600 : 400,
-                  color: sidebarTab === 'skills' ? '#1677ff' : '#666',
+                  color: sidebarTab === 'skills' ? editToken.colorPrimary : editToken.colorTextSecondary,
                   borderBottom: sidebarTab === 'skills'
-                    ? '2px solid #1677ff' : '2px solid transparent',
+                    ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
                   fontSize: 13,
                 }}
               >
@@ -936,9 +940,9 @@ function EditMode({
                   cursor: selectedNode ? 'pointer' : 'not-allowed',
                   fontWeight: sidebarTab === 'config' ? 600 : 400,
                   color: sidebarTab === 'config'
-                    ? '#1677ff' : selectedNode ? '#666' : '#ccc',
+                    ? editToken.colorPrimary : selectedNode ? editToken.colorTextSecondary : editToken.colorTextQuaternary,
                   borderBottom: sidebarTab === 'config'
-                    ? '2px solid #1677ff' : '2px solid transparent',
+                    ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
                   fontSize: 13,
                 }}
               >

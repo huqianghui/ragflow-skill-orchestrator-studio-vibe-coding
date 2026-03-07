@@ -22,8 +22,9 @@ import {
 import Editor from '@monaco-editor/react';
 import type { Connection, PreloadedImports, SkillTestResult } from '../types';
 import { connectionsApi, skillsApi } from '../services/api';
+import PageHeader from '../components/PageHeader';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 const DEFAULT_CODE = `def process(data: dict, context) -> dict:
@@ -259,20 +260,18 @@ export default function SkillEditor() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Space>
-          <Button onClick={() => {
-            if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
-            navigate('/skills');
-          }}>Back</Button>
-          <Title level={3} style={{ margin: 0 }}>
-            {isNew ? 'New Python Skill' : `Edit: ${name}`}
-          </Title>
-        </Space>
-        <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-          Save
-        </Button>
-      </div>
+      <PageHeader
+        title={isNew ? 'New Python Skill' : `Edit: ${name}`}
+        onBack={() => {
+          if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
+          navigate('/skills');
+        }}
+        extra={
+          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+            Save
+          </Button>
+        }
+      />
 
       <div style={{ display: 'flex', gap: 16 }}>
         {/* Left panel: Code Editor */}

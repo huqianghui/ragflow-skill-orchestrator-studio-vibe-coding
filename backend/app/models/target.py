@@ -9,7 +9,7 @@ class Target(BaseModel):
 
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, default=None)
-    # azure_ai_search | mysql | postgresql | cosmosdb | neo4j
+    # azure_ai_search | azure_blob | cosmosdb_gremlin | neo4j | mysql | postgresql
     target_type: Mapped[str] = mapped_column(String(50))
     connection_config: Mapped[dict] = mapped_column(JSON, default=dict)
     field_mappings: Mapped[dict] = mapped_column(JSON, default=dict)

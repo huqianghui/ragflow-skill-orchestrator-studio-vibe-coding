@@ -183,17 +183,59 @@ export interface UploadQuotaInfo {
   temp_dir: string;
 }
 
+export type TargetType =
+  | 'azure_ai_search'
+  | 'azure_blob'
+  | 'cosmosdb_gremlin'
+  | 'neo4j'
+  | 'mysql'
+  | 'postgresql';
+
 export interface Target {
   id: string;
   name: string;
   description: string | null;
-  target_type: 'azure_ai_search' | 'mysql' | 'postgresql' | 'cosmosdb' | 'neo4j';
+  target_type: TargetType;
   connection_config: Record<string, unknown>;
   field_mappings: Record<string, unknown>;
   status: 'active' | 'inactive' | 'error';
   pipeline_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TargetTestResult {
+  success: boolean;
+  message: string;
+}
+
+export interface TargetSchemaField {
+  name: string;
+  type: string;
+  searchable?: boolean;
+  filterable?: boolean;
+  nullable?: boolean;
+  key?: boolean;
+  vector_config?: Record<string, unknown>;
+}
+
+export interface TargetSchemaDiscovery {
+  exists: boolean;
+  schema_fields: TargetSchemaField[] | null;
+  suggested_schema: TargetSchemaField[] | null;
+}
+
+export interface MappingValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface PipelineOutputField {
+  path: string;
+  type: string;
+  from_skill: string;
+  vector_hint?: { model: string; dimensions: number };
 }
 
 export interface Run {

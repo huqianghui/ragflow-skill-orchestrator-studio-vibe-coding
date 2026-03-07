@@ -13,7 +13,14 @@ import { Responsive, useContainerWidth } from 'react-grid-layout';
 import type { Layout, Layouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { connectionsApi, pipelinesApi, skillsApi } from '../services/api';
+import {
+  connectionsApi,
+  dataSourcesApi,
+  pipelinesApi,
+  runsApi,
+  skillsApi,
+  targetsApi,
+} from '../services/api';
 
 const { Title, Text } = Typography;
 
@@ -138,10 +145,16 @@ export default function Dashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        const [skillsResp, pipelinesResp, connectionsResp] = await Promise.all([
+        const [
+          skillsResp, pipelinesResp, connectionsResp,
+          dsResp, targetsResp, runsResp,
+        ] = await Promise.all([
           skillsApi.list(1, 50),
           pipelinesApi.list(1, 10),
           connectionsApi.list(1, 20),
+          dataSourcesApi.list(1, 1),
+          targetsApi.list(1, 1),
+          runsApi.list(1, 1),
         ]);
         const allSkills = skillsResp.items;
         setStats({
@@ -150,9 +163,9 @@ export default function Dashboard() {
           customSkills: allSkills.filter(s => !s.is_builtin).length,
           connections: connectionsResp.total,
           pipelines: pipelinesResp.total,
-          datasources: 0,
-          targets: 0,
-          runhistory: 0,
+          datasources: dsResp.total,
+          targets: targetsResp.total,
+          runhistory: runsResp.total,
         });
       } catch { /* cards show '-' */ } finally {
         setLoading(false);
@@ -185,9 +198,6 @@ export default function Dashboard() {
           <Tag color="green" style={{ margin: 0 }}>{stats.customSkills ?? 0} custom</Tag>
         </span>
       );
-    }
-    if (key === 'datasources' || key === 'targets' || key === 'runhistory') {
-      return <Text type="secondary" style={{ fontSize: 12 }}>Coming soon</Text>;
     }
     return null;
   };

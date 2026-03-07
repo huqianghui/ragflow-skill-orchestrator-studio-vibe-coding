@@ -4,15 +4,19 @@ import type {
   ConnectionTestResult,
   DataSource,
   DataSourceTestResult,
+  MappingValidationResult,
   PaginatedResponse,
   Pipeline,
   PipelineDebugResult,
+  PipelineOutputField,
   PipelineTemplate,
   PreloadedImports,
   Run,
   Skill,
   SkillTestResult,
   Target,
+  TargetSchemaDiscovery,
+  TargetTestResult,
   UploadQuotaInfo,
 } from '../types';
 
@@ -146,6 +150,20 @@ export const targetsApi = {
     apiClient.put<Target>(`/targets/${id}`, data).then(r => r.data),
   delete: (id: string) =>
     apiClient.delete(`/targets/${id}`),
+  test: (id: string) =>
+    apiClient.post<TargetTestResult>(`/targets/${id}/test`).then(r => r.data),
+  discoverSchema: (id: string) =>
+    apiClient.get<TargetSchemaDiscovery>(`/targets/${id}/discover-schema`).then(r => r.data),
+  createIndex: (id: string, body?: { index_definition?: unknown[] }) =>
+    apiClient.post(`/targets/${id}/create-index`, body || {}).then(r => r.data),
+  getPipelineOutputs: (id: string, pipelineId?: string) =>
+    apiClient.get<{ outputs: PipelineOutputField[] }>(`/targets/${id}/pipeline-outputs`, {
+      params: pipelineId ? { pipeline_id: pipelineId } : {},
+    }).then(r => r.data),
+  validateMapping: (id: string, body: { field_mappings: Record<string, unknown>; pipeline_id?: string }) =>
+    apiClient.post<MappingValidationResult>(`/targets/${id}/validate-mapping`, body).then(r => r.data),
+  write: (id: string, body: { records?: Record<string, unknown>[]; data?: Record<string, unknown> }) =>
+    apiClient.post(`/targets/${id}/write`, body).then(r => r.data),
 };
 
 // --- Runs ---

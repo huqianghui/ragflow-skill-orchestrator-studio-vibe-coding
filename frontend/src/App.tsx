@@ -10,6 +10,7 @@ import Pipelines from './pages/Pipelines';
 import PipelineEditor from './pages/PipelineEditor';
 import DataSources from './pages/DataSources';
 import DataSourceNew from './pages/DataSourceNew';
+import TargetNew from './pages/TargetNew';
 import Targets from './pages/Targets';
 import RunHistory from './pages/RunHistory';
 import Settings from './pages/Settings';
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/pipelines/:id" element={<PipelineEditor />} />
             <Route path="/data-sources/new" element={<DataSourceNew />} />
             <Route path="/data-sources" element={<DataSources />} />
+            <Route path="/targets/new" element={<TargetNew />} />
             <Route path="/targets" element={<Targets />} />
             <Route path="/runs" element={<RunHistory />} />
             <Route path="/settings" element={<Settings />} />

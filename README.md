@@ -6,55 +6,34 @@
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Frontend (React)                       │
-│  Ant Design + React Flow + TypeScript + Zustand           │
-│  Port: 15173 (dev) / 80 (prod nginx)                     │
-└────────────────────┬─────────────────────────────────────┘
+│                    Frontend (React 19)                     │
+│  Ant Design + Monaco Editor + TypeScript + Zustand         │
+│  Port: 15173 (dev) / 80 (prod nginx)                      │
+└────────────────────┬───────────────────────────────────────┘
                      │ /api/v1/*
-┌────────────────────▼─────────────────────────────────────┐
-│                   Backend (FastAPI)                        │
-│  SQLAlchemy 2.0 (async) + Pydantic v2 + Alembic           │
-│  Port: 18000                                              │
-└────────────────────┬─────────────────────────────────────┘
+┌────────────────────▼───────────────────────────────────────┐
+│                   Backend (FastAPI)                          │
+│  SQLAlchemy 2.0 (async) + Pydantic v2 + Alembic             │
+│  Port: 18000                                                │
+└────────────────────┬───────────────────────────────────────┘
                      │
               ┌──────▼──────┐
-              │   SQLite     │
-              │  (MVP 阶段)   │
-              └─────────────┘
+              │   SQLite      │
+              │  (MVP 阶段)    │
+              └──────────────┘
 ```
 
 ## 核心模块
 
-| 模块 | 说明 | 状态 |
-|------|------|------|
-| **Skills** | Skill 管理 — 内置 + 自定义 (Web API / 配置模板 / Python 代码) | Phase 1 CRUD 完成 |
-| **Pipelines** | Pipeline DAG 编排 — 节点管理、字段映射、验证、模板库 | Phase 1 CRUD 完成 |
-| **Data Sources** | 数据源管理 — 本地文件上传、Azure Blob Storage | Phase 1 CRUD 完成 |
-| **Targets** | 输出目标 — Azure AI Search (Phase 1)，MySQL/PgSQL/CosmosDB/Neo4j (Phase 2) | Phase 1 CRUD 完成 |
-| **Runs** | Pipeline 执行 — 同步/异步、步骤可观测性、中间结果、日志 | Phase 1 CRUD 完成 |
-| **System** | 健康检查、配置管理、存储清理 | 已实现 |
-
-## 技术栈
-
-### Backend
-- **Python 3.12** + **FastAPI** >= 0.110
-- **SQLAlchemy 2.0** (async) + **aiosqlite** (SQLite)
-- **Pydantic v2** + **pydantic-settings**
-- **Alembic** 数据库迁移
-- **ruff** 代码规范 + **pytest** 测试
-
-### Frontend
-- **React 18** + **TypeScript** + **Vite**
-- **Ant Design** UI 组件库
-- **React Flow** (@xyflow/react) Pipeline 画布
-- **Zustand** 状态管理
-- **Axios** HTTP 客户端
-
-### DevOps
-- **Docker** + **Docker Compose** 本地开发
-- **Azure Container Apps** 生产部署
-- **Azure Container Registry (ACR)** 镜像管理
-- **GitHub Actions** CI/CD (OIDC 认证，零长期密钥)
+| 模块 | 说明 | 已实现功能 |
+|------|------|-----------|
+| **Skills** | Skill 管理 — 16 个内置 + 3 种自定义 (Web API / 配置模板 / Python 代码) | CRUD、内置 Skill 自动播种、Python Code 执行引擎（隔离 venv）、内置 Skill 执行引擎（Azure AI Language/Vision/OpenAI）、Document Intelligence Studio、Connection 绑定、在线测试 |
+| **Connections** | 外部服务认证凭据管理（Azure OpenAI / AI Foundry / Doc Intelligence 等） | CRUD、AES 加密存储、API 响应脱敏、连通性测试、Default Connection |
+| **Pipelines** | Pipeline 有序 Skill 节点编排 | CRUD、节点管理（添加/删除/拖拽排序）、Enrichment Tree 数据结构、Pipeline Runner 执行引擎、Debug 模式（3 列调试布局）、5 个预置模板 |
+| **Data Sources** | 16 种数据源类型（Local / Azure / AWS / Logic Apps 等） | CRUD、本地文件上传（配额管理）、连通性测试、Secret 掩码、过期清理 |
+| **Targets** | 6 种输出目标（AI Search / Blob / CosmosDB / Neo4j / MySQL / PostgreSQL） | CRUD、连通性测试、Schema 发现、索引管理、字段映射引擎（含图数据映射）、Writer 服务 |
+| **Runs** | Pipeline 执行记录管理 | CRUD（Phase 2 将实现完整执行引擎） |
+| **System** | 全局功能 | 健康检查、配置管理、CORS、临时文件定期清理 |
 
 ## 快速开始
 
@@ -70,16 +49,16 @@ docker-compose up
 
 ### 方式二：本地开发
 
-**后端：**
+> Backend 必须先于 Frontend 启动（Vite 会代理 `/api` 到后端）。
+
 ```bash
+# Terminal 1: Backend (port 18000)
 cd backend
 pip install -e ".[dev]"
 alembic upgrade head
 uvicorn app.main:app --reload --port 18000
-```
 
-**前端：**
-```bash
+# Terminal 2: Frontend (port 15173)
 cd frontend
 npm install
 npm run dev
@@ -92,131 +71,120 @@ npm run dev
 | Frontend | https://skill-studio-frontend.wittydesert-1de78f5f.eastus.azurecontainerapps.io |
 | Backend API | https://skill-studio-backend.wittydesert-1de78f5f.eastus.azurecontainerapps.io |
 | Swagger Docs | https://skill-studio-backend.wittydesert-1de78f5f.eastus.azurecontainerapps.io/docs |
-| Health Check | https://skill-studio-backend.wittydesert-1de78f5f.eastus.azurecontainerapps.io/health |
 
 ## API 端点
 
-所有业务 API 统一前缀 `/api/v1`，健康检查在根路径。
+所有业务 API 统一前缀 `/api/v1`，健康检查在根路径。完整 API 文档见 Swagger UI (`/docs`)。
 
-| 路径 | 方法 | 说明 |
+### Health
+
+| 方法 | 路径 | 说明 |
 |------|------|------|
-| `GET /health` | GET | 健康检查 |
-| `/api/v1/skills` | GET, POST | Skill 列表（分页）/ 创建 |
-| `/api/v1/skills/{id}` | GET, PUT, DELETE | Skill 详情 / 更新 / 删除 |
-| `/api/v1/pipelines` | GET, POST | Pipeline 列表 / 创建 |
-| `/api/v1/pipelines/{id}` | GET, PUT, DELETE | Pipeline 详情 / 更新 / 删除 |
-| `/api/v1/data-sources` | GET, POST | 数据源列表 / 创建 |
-| `/api/v1/data-sources/{id}` | GET, PUT, DELETE | 数据源详情 / 更新 / 删除 |
-| `/api/v1/targets` | GET, POST | 输出目标列表 / 创建 |
-| `/api/v1/targets/{id}` | GET, PUT, DELETE | 目标详情 / 更新 / 删除 |
-| `/api/v1/runs` | GET, POST | 运行记录列表 / 创建 |
-| `/api/v1/runs/{id}` | GET | 运行详情 |
+| GET | `/health` | 健康检查 |
 
-### 分页
+### Skills
 
-列表接口支持分页参数：`?page=1&page_size=20`
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/skills` | Skill 列表（分页） |
+| POST | `/api/v1/skills` | 创建 Skill |
+| GET | `/api/v1/skills/preloaded-imports` | 预装包列表 |
+| GET | `/api/v1/skills/test-file/{file_id}` | 获取已上传测试文件 |
+| GET | `/api/v1/skills/{id}` | Skill 详情 |
+| PUT | `/api/v1/skills/{id}` | 更新 Skill |
+| PUT | `/api/v1/skills/{id}/configure` | 配置内置 Skill（绑定连接 + 参数） |
+| DELETE | `/api/v1/skills/{id}` | 删除 Skill |
+| POST | `/api/v1/skills/upload-test-file` | 上传测试文件 |
+| POST | `/api/v1/skills/{id}/test` | 测试已保存 Skill |
+| POST | `/api/v1/skills/test-code` | 测试未保存代码 |
 
-响应格式：
-```json
-{
-  "items": [...],
-  "total": 100,
-  "page": 1,
-  "page_size": 20,
-  "total_pages": 5
-}
-```
+### Connections
 
-### 错误响应
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/connections` | Connection 列表（分页，config 脱敏） |
+| GET | `/api/v1/connections/defaults` | 各类型默认 Connection |
+| POST | `/api/v1/connections` | 创建 Connection |
+| GET | `/api/v1/connections/{id}` | Connection 详情 |
+| PUT | `/api/v1/connections/{id}` | 更新 Connection |
+| DELETE | `/api/v1/connections/{id}` | 删除 Connection |
+| POST | `/api/v1/connections/{id}/test` | 测试连接 |
+| PUT | `/api/v1/connections/{id}/set-default` | 设为默认连接 |
 
-```json
-{
-  "code": "NOT_FOUND",
-  "message": "Skill with id 'xxx' not found",
-  "details": null
-}
-```
+### Pipelines
 
-## 项目结构
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/pipelines` | Pipeline 列表（分页） |
+| POST | `/api/v1/pipelines` | 创建 Pipeline |
+| GET | `/api/v1/pipelines/available-skills` | 可用 Skill 列表（含 pipeline_io） |
+| GET | `/api/v1/pipelines/templates` | Pipeline 模板列表 |
+| GET | `/api/v1/pipelines/{id}` | Pipeline 详情 |
+| PUT | `/api/v1/pipelines/{id}` | 更新 Pipeline |
+| DELETE | `/api/v1/pipelines/{id}` | 删除 Pipeline |
+| POST | `/api/v1/pipelines/{id}/debug` | Debug 执行（multipart 上传文件） |
 
-```
-.
-├── backend/                      # FastAPI 后端
-│   ├── app/
-│   │   ├── main.py               # 应用入口
-│   │   ├── config.py             # 配置管理 (pydantic-settings)
-│   │   ├── database.py           # 数据库连接
-│   │   ├── models/               # SQLAlchemy ORM 模型
-│   │   │   ├── base.py           # 基类 (id, created_at, updated_at)
-│   │   │   ├── skill.py
-│   │   │   ├── pipeline.py
-│   │   │   ├── data_source.py
-│   │   │   ├── target.py
-│   │   │   └── run.py
-│   │   ├── schemas/              # Pydantic 请求/响应模型
-│   │   ├── api/                  # API 路由
-│   │   │   ├── health.py
-│   │   │   ├── skills.py
-│   │   │   ├── pipelines.py
-│   │   │   ├── data_sources.py
-│   │   │   ├── targets.py
-│   │   │   └── runs.py
-│   │   └── utils/                # 异常处理、分页
-│   ├── alembic/                  # 数据库迁移
-│   ├── tests/                    # pytest 测试
-│   ├── pyproject.toml
-│   └── Dockerfile
-├── frontend/                     # React 前端
-│   ├── src/
-│   │   ├── App.tsx               # 路由配置
-│   │   ├── components/
-│   │   │   └── AppLayout.tsx     # 侧边栏 + 内容区布局
-│   │   ├── pages/                # 8 个页面
-│   │   ├── services/api.ts       # Axios API 封装
-│   │   └── types/index.ts        # TypeScript 类型定义
-│   ├── nginx.conf                # 生产 nginx 配置
-│   ├── vite.config.ts
-│   └── Dockerfile                # 多阶段构建 (node → nginx)
-├── openspec/                     # OpenSpec 需求文档
-│   ├── specs/                    # 系统行为规格 (6 个模块)
-│   └── changes/                  # 变更提案 (6 个 change)
-├── docker-compose.yml
-└── .github/workflows/ci.yml      # CI/CD
-```
+### Data Sources
 
-## CI/CD 流程
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/data-sources/upload-quota` | 上传配额信息 |
+| POST | `/api/v1/data-sources/upload` | 上传本地文件 |
+| GET | `/api/v1/data-sources` | 数据源列表（分页，config 脱敏） |
+| POST | `/api/v1/data-sources` | 创建数据源 |
+| GET | `/api/v1/data-sources/{id}` | 数据源详情 |
+| PUT | `/api/v1/data-sources/{id}` | 更新数据源 |
+| POST | `/api/v1/data-sources/{id}/test` | 测试连通性 |
+| DELETE | `/api/v1/data-sources/{id}` | 删除数据源 |
 
-每次 push 到 `main` 分支自动执行：
+### Targets
 
-```
-backend-test ──┐
-               ├──→ deploy (ACR build → Container Apps update)
-frontend-test ─┘
-```
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/targets` | 目标列表（分页，config 脱敏） |
+| POST | `/api/v1/targets` | 创建目标 |
+| GET | `/api/v1/targets/{id}` | 目标详情 |
+| PUT | `/api/v1/targets/{id}` | 更新目标 |
+| GET | `/api/v1/targets/{id}/discover-schema` | 发现目标 Schema |
+| POST | `/api/v1/targets/{id}/create-index` | 创建 AI Search 索引 |
+| GET | `/api/v1/targets/{id}/pipeline-outputs` | Pipeline 输出字段推断 |
+| POST | `/api/v1/targets/{id}/validate-mapping` | 验证字段映射 |
+| POST | `/api/v1/targets/{id}/write` | 写入数据 |
+| POST | `/api/v1/targets/{id}/test` | 测试连通性 |
+| DELETE | `/api/v1/targets/{id}` | 删除目标 |
 
-1. **backend-test** — ruff lint + format check + pytest
-2. **frontend-test** — TypeScript type check + vite build
-3. **deploy** — 构建 Docker 镜像推送 ACR，更新 Azure Container Apps
+### Runs
 
-认证方式：GitHub Actions OIDC → Azure AD federated credentials（零长期密钥）。
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/runs` | Run 列表（分页） |
+| POST | `/api/v1/runs` | 创建 Run 记录 |
+| GET | `/api/v1/runs/{id}` | Run 详情 |
 
-## OpenSpec 文档
+### 通用规范
 
-项目使用 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 管理需求文档：
+- **分页**: `?page=1&page_size=20` → `{ items, total, page, page_size, total_pages }`
+- **成功响应**: 直接返回数据对象，创建返回 201，删除返回 204
+- **错误响应**: `{ "code": "NOT_FOUND", "message": "...", "details": null }`
+- 详细规格见 `openspec/specs/system/spec.md`
 
-- `openspec/specs/` — 6 个模块的系统行为规格（Requirement + Scenario + GIVEN/WHEN/THEN）
-- `openspec/changes/` — 6 个变更提案（proposal + design + tasks）
+## 技术栈
 
-### 实现路线图
+| 层 | 技术 |
+|----|------|
+| Backend | Python 3.12, FastAPI >= 0.110, SQLAlchemy 2.0 (async), aiosqlite, Pydantic v2, Alembic |
+| Frontend | React 19, TypeScript 5.9, Vite 7, Ant Design 6, Monaco Editor, Zustand, Axios |
+| Lint/Test | ruff (lint + format), pytest, tsc -b |
+| DevOps | Docker Compose, GitHub Actions CI/CD, Azure Container Apps (OIDC 零密钥) |
 
-| # | Change | 说明 | 状态 |
-|---|--------|------|------|
-| 1 | `init-project-foundation` | 项目脚手架、数据模型、API 框架 | **已完成** |
-| 2 | `skill-management` | Skill 执行引擎 + 内置 Skill + Skill 库 | 待实现 |
-| 3 | `pipeline-orchestration` | Pipeline DAG 编排 + React Flow 画布 | 待实现 |
-| 4 | `datasource-and-execution` | 数据源管理 + 执行引擎 + 日志 | 待实现 |
-| 5 | `output-targets` | Azure AI Search 写入 + 字段映射 | 待实现 |
-| 6 | `react-frontend` | 完整 React UI | 待实现 |
+## 文档指引
+
+| 文档 | 面向对象 | 内容 |
+|------|---------|------|
+| `CLAUDE.md` | Claude Code / Agent | 开发流程、编码规范、提交检查、踩坑清单 |
+| `openspec/config.yaml` | 所有人 | 技术栈决策、spec 索引 |
+| `openspec/specs/` | 开发者 | 13 个模块的系统行为规格（GIVEN/WHEN/THEN） |
+| `openspec/changes/archive/` | 开发者 | 18 个已归档的变更（proposal → design → tasks） |
 
 ## 关键设计决策
 
@@ -224,40 +192,10 @@ frontend-test ─┘
 |------|------|------|
 | 数据库 | SQLite (MVP) | 零运维，后续可切换 PostgreSQL |
 | ID 策略 | UUID v4 | 避免暴露业务量，支持分布式扩展 |
-| Pipeline 图存储 | JSON 字段 | React Flow 节点/边结构灵活 |
-| 异步框架 | 全 async/await | FastAPI 原生支持 |
-| 认证 | 无 (MVP) | 单用户模式 |
+| Pipeline 编排 | 有序 Skill 节点列表 + Enrichment Tree | 简单直观，通过 context 路径实现扇出执行 |
 | 自定义 Skill | Web API + 配置模板 + Python 代码 | 三种方式覆盖不同场景 |
-
-## 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/app.db` | 数据库连接 |
-| `DEBUG` | `true` | 调试模式 |
-| `CORS_ORIGINS` | `["http://localhost:15173"]` | 允许的跨域来源 |
-| `MAX_UPLOAD_SIZE_MB` | `100` | 最大上传文件大小 |
-| `SYNC_EXECUTION_TIMEOUT_S` | `300` | 同步执行超时 |
-| `CLEANUP_RETENTION_DAYS` | `7` | 中间结果保留天数 |
-| `LOG_LEVEL` | `INFO` | 日志级别 |
-
-## 开发命令
-
-```bash
-# 后端
-cd backend
-ruff check .                # Lint
-ruff format .               # 格式化
-pytest -v                   # 测试
-alembic revision --autogenerate -m "description"  # 生成迁移
-alembic upgrade head        # 执行迁移
-
-# 前端
-cd frontend
-npm run dev                 # 开发服务器
-npm run build               # 构建
-npx tsc --noEmit            # 类型检查
-```
+| Skill 执行隔离 | Python venv | 每个 Skill 可有独立依赖 |
+| 认证 | 无 (MVP) | 单用户模式 |
 
 ## License
 

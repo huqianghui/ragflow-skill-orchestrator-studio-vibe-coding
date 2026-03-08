@@ -1,4 +1,4 @@
-# CLAUDE.md — RAGFlow Skill Orchestrator Studio
+# CLAUDE.md — Agentic RAGFlow Studio
 
 > **定位**: 这是 Claude Code 的工程操作手册 — 只关注 **HOW**（怎么开发），不重复 **WHAT**（系统做什么）。
 > 产品需求、API 契约、数据模型等 WHAT 内容由 `openspec/` 管理。

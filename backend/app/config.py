@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "RAGFlow Skill Orchestrator Studio"
+    app_name: str = "Agentic RAGFlow Studio"
     version: str = "0.1.0"
     debug: bool = True
     database_url: str = "sqlite+aiosqlite:///./data/app.db"

@@ -1,8 +1,8 @@
 project:
-  name: ragflow-skill-orchestrator-studio
+  name: agentic-ragflow-studio
   description: >
-    A flexible Skill Orchestration Studio for building data ingestion pipelines,
-    inspired by Azure AI Search "Import Data" but with customizable skills,
+    An AI Agent-driven studio for building data ingestion pipelines,
+    with pluggable CLI agents (Claude Code, Codex, Copilot), customizable skills,
     visual pipeline construction, and rapid testing/debugging capabilities.
   version: 0.1.0
 

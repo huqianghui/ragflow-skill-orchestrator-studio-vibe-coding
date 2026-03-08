@@ -30,7 +30,7 @@
 
 | 字段名 (config.py) | 默认值 | 说明 |
 |---------------------|--------|------|
-| app_name | RAGFlow Skill Orchestrator Studio | 应用名称 |
+| app_name | Agentic RAGFlow Studio | 应用名称 |
 | version | 0.1.0 | 版本号 |
 | debug | true | 调试模式 |
 | database_url | sqlite+aiosqlite:///./data/app.db | 数据库连接 |

@@ -69,7 +69,7 @@ export default function AppLayout() {
             transition: 'all 0.2s',
           }}
         >
-          {collapsed ? 'SO' : 'Skill Orchestrator'}
+          {collapsed ? 'AR' : 'Agentic RAGFlow'}
         </div>
 
         {/* Collapse toggle button — prominent, above the menu */}
@@ -125,7 +125,7 @@ export default function AppLayout() {
               color: hasHeaderGradient ? token.colorPrimary : undefined,
             }}
           >
-            RAGFlow Skill Orchestrator Studio
+            Agentic RAGFlow Studio
           </span>
           <ThemeSwitcher />
         </Header>

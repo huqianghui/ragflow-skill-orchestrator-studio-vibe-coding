@@ -1,6 +1,6 @@
-# RAGFlow Skill Orchestrator Studio
+# Agentic RAGFlow Studio
 
-一个灵活的 Skill 编排工作室，用于构建数据摄取管道（Data Ingestion Pipeline）。灵感来源于 Azure AI Search 的 "Import Data" 功能，但提供更高的定制化能力：自定义 Skill、可视化 Pipeline 构建、快速测试调试。
+AI Agent 驱动的智能编排工作室，用于构建数据摄取管道（Data Ingestion Pipeline）。集成 Claude Code、Codex、GitHub Copilot 等本地 CLI Agent，在 Skill 编写、Pipeline 编排和调试的每个环节提供智能辅助。灵感来源于 Azure AI Search 的 "Import Data" 功能，但提供更高的定制化能力和 AI 驱动的工作流。
 
 ## 架构概览
 

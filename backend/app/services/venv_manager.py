@@ -52,12 +52,14 @@ class VenvManager:
         subprocess.run(
             [sys.executable, "-m", "venv", str(self.base_path)],
             check=True,
+            timeout=60,
         )
 
         pip = self._pip_path(self.base_path)
         subprocess.run(
             [pip, "install", "--quiet"] + PRELOADED_PACKAGES,
             check=True,
+            timeout=300,
         )
         logger.info("Base venv created with %d packages", len(PRELOADED_PACKAGES))
         return self.base_path

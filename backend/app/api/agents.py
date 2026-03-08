@@ -30,9 +30,11 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 
 @router.get("/available")
-async def list_available_agents() -> list[AgentInfoResponse]:
-    """Detect and return all registered agents with availability status."""
-    infos = await registry.discover()
+async def list_available_agents(
+    db: AsyncSession = Depends(get_db),
+) -> list[AgentInfoResponse]:
+    """Return all registered agents with availability status (DB-backed, fast)."""
+    infos = await registry.discover(db)
     return [
         AgentInfoResponse(
             name=i.name,
@@ -50,6 +52,13 @@ async def list_available_agents() -> list[AgentInfoResponse]:
         )
         for i in infos
     ]
+
+
+@router.post("/refresh")
+async def refresh_agents(db: AsyncSession = Depends(get_db)) -> dict:
+    """Manually trigger agent availability refresh (probes CLIs, updates DB)."""
+    await registry.refresh(db)
+    return {"status": "refreshed"}
 
 
 @router.get("/{agent_name}/config")

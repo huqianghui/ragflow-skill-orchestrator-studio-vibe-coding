@@ -11,6 +11,7 @@ from app.api.router import api_router
 from app.config import get_settings
 from app.database import AsyncSessionLocal, engine
 from app.models import Base
+from app.services.agents.registry import registry as agent_registry
 from app.services.skill_seeder import seed_builtin_skills
 from app.services.venv_manager import VenvManager
 from app.utils.exceptions import AppException
@@ -43,6 +44,25 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.warning("Failed to cleanup uploads on startup (non-fatal)", exc_info=True)
 
+    # Seed agent configs into DB so first /available call is instant
+    try:
+        async with AsyncSessionLocal() as db:
+            await agent_registry.refresh(db)
+    except Exception:
+        logger.warning("Failed to seed agent configs on startup (non-fatal)", exc_info=True)
+
+    # Background: refresh agent availability every 120 seconds
+    async def _agent_refresh_loop():
+        while True:
+            await asyncio.sleep(120)
+            try:
+                async with AsyncSessionLocal() as db:
+                    await agent_registry.refresh(db)
+            except Exception:
+                logger.warning("Agent refresh failed (non-fatal)", exc_info=True)
+
+    agent_refresh_task = asyncio.create_task(_agent_refresh_loop())
+
     # Start temp file cleanup task
     async def _cleanup_loop():
         from app.services.temp_file_manager import cleanup_expired_files
@@ -53,6 +73,7 @@ async def lifespan(app: FastAPI):
 
     cleanup_task = asyncio.create_task(_cleanup_loop())
     yield
+    agent_refresh_task.cancel()
     cleanup_task.cancel()
     await engine.dispose()
 

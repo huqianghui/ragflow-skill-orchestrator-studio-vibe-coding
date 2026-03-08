@@ -216,9 +216,52 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
+    op.create_table(
+        "agent_configs",
+        sa.Column("name", sa.String(length=50), nullable=False),
+        sa.Column("display_name", sa.String(length=100), nullable=False),
+        sa.Column("icon", sa.String(length=50), nullable=False),
+        sa.Column("description", sa.Text(), nullable=False, server_default=""),
+        sa.Column("modes", sa.JSON(), nullable=False),
+        sa.Column(
+            "available",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("0"),
+        ),
+        sa.Column("version", sa.String(length=100), nullable=True),
+        sa.Column("provider", sa.String(length=100), nullable=True),
+        sa.Column("model", sa.String(length=100), nullable=True),
+        sa.Column("install_hint", sa.String(length=255), nullable=True),
+        sa.Column("tools", sa.JSON(), nullable=False),
+        sa.Column("mcp_servers", sa.JSON(), nullable=False),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+    )
+    with op.batch_alter_table("agent_configs", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_agent_configs_name"), ["name"], unique=True
+        )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    with op.batch_alter_table("agent_configs", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_agent_configs_name"))
+    op.drop_table("agent_configs")
     op.drop_table("agent_sessions")
     with op.batch_alter_table("runs", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_runs_pipeline_id"))

@@ -39,8 +39,8 @@ openspec/
 每个功能变更遵循三步走：
 
 ```
-/openspec-propose  →  /openspec-apply-change  →  /openspec-archive-change
-   (提案)                (逐 task 实现)               (归档 + 同步 specs)
+/opsx:propose  →  /opsx:apply  →  /opsx:archive
+   (提案)            (逐 task 实现)    (归档 + 同步 specs)
 ```
 
 ### 关键原则
@@ -104,7 +104,7 @@ frontend/
   public/
     icons/         # SVG 图标 (data-sources/, targets/)
 
-openspec/          # 产品规格 — 19 个 spec (详见上方文档分层体系)
+openspec/          # 产品规格 — 19 个 spec, 28 个已归档变更 (详见上方文档分层体系)
 ```
 
 ---

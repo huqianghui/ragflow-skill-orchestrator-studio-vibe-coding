@@ -57,9 +57,10 @@ openspec/
 ```
 backend/
   app/
-    api/           # FastAPI 路由: health, skills, connections, pipelines, runs, targets, data_sources
-    models/        # SQLAlchemy ORM 模型
-    schemas/       # Pydantic 请求/响应 schema
+    api/           # FastAPI 路由: health, skills, connections, pipelines,
+                   #   runs, targets, data_sources, agents
+    models/        # SQLAlchemy ORM 模型 (含 agent_session)
+    schemas/       # Pydantic 请求/响应 schema (含 agent)
     services/      # 业务逻辑层
                    #   skill_runner, venv_manager, skill_seeder, skill_context
                    #   upload_manager, temp_file_manager
@@ -67,6 +68,8 @@ backend/
                    #   target_index_manager, target_schema_discovery, mapping_engine
                    #   builtin_skills/ (base, runner, 6 类内置 Skill 实现)
                    #   pipeline/ (enrichment_tree, runner)
+                   #   agents/ (base, registry, session_proxy, context_builder,
+                   #            adapters/: claude_code, codex, copilot)
     utils/         # 工具类 (encryption, exceptions, pagination)
     data/          # 内置数据定义 (builtin_skills, pipeline_templates, pipeline_defaults)
     config.py      # pydantic-settings 配置
@@ -79,13 +82,16 @@ backend/
 
 frontend/
   src/
-    pages/         # 14 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
+    pages/         # 15 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
                    #   BuiltinSkillEditor, Connections, Pipelines, PipelineEditor,
                    #   DataSources, DataSourceNew, Targets, TargetNew,
-                   #   RunHistory, Settings)
+                   #   RunHistory, Settings, AgentPlayground, AgentHistory)
     components/    # 可复用 UI 组件 (AppLayout, TableUtils, ConfigSchemaForm)
-    services/      # API 客户端 (axios)
-    types/         # TypeScript 类型定义
+                   #   agent/ (AgentChatWidget, AgentSelector, AgentIcon,
+                   #           SessionBar, ModeBar, MessageBubble, ContextPanel,
+                   #           AgentDetailPanel, ApplyActions)
+    services/      # API 客户端 (axios): api.ts, agentApi.ts
+    types/         # TypeScript 类型定义: index.ts, agent.ts
   public/
     icons/         # SVG 图标 (data-sources/, targets/)
 
@@ -214,6 +220,8 @@ GitHub Actions 在 push/PR 到 `main` 时运行 (`.github/workflows/ci.yml`):
 | 5 | FastAPI 路由顺序 | `/defaults` 必须在 `/{id}` 前面 |
 | 6 | HTTP header 中文 | `UnicodeEncodeError`，必须 URL-encode |
 | 7 | 前端 ECONNREFUSED | 后端没启动，不是代码问题 |
+| 8 | WebSocket handler DB | Agent WS 用 `AsyncSessionLocal()`（不走 Depends），测试 mock `session_proxy` |
+| 9 | UTC 时间偏移 | 后端 SQLite `func.now()` 返回 UTC 无 Z 后缀，前端解析前需追加 `Z` |
 
 ---
 

@@ -1,0 +1,229 @@
+# Agents Module Spec
+
+> CLI Coding Agent 集成 — 发现、会话管理、实时聊天、配置读取
+
+## 1. 架构概述
+
+```
+┌─────────────────────────────────────────────┐
+│ Frontend: AgentPlayground / Embedded Widget  │
+│   AgentSelector → AgentChatWidget → WS      │
+└────────────────┬────────────────────────────┘
+                 │ REST + WebSocket
+┌────────────────▼────────────────────────────┐
+│ Backend: api/agents.py                       │
+│   ├── GET /available       (发现)            │
+│   ├── GET /{name}/config   (配置读取)        │
+│   ├── CRUD /sessions       (会话管理)        │
+│   └── WS /sessions/{id}/ws (实时聊天)        │
+├──────────────────────────────────────────────┤
+│ services/agents/                             │
+│   ├── registry.py     → 全局注册中心 (单例)   │
+│   ├── base.py         → BaseAgentAdapter 抽象 │
+│   ├── session_proxy.py → Session DB 代理      │
+│   ├── context_builder.py → 上下文 prompt 组装 │
+│   └── adapters/       → 具体实现              │
+│       ├── claude_code.py                     │
+│       ├── codex.py                           │
+│       └── copilot.py                         │
+└──────────────────────────────────────────────┘
+```
+
+## 2. 数据模型
+
+### AgentSession (ORM)
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| id | UUID (PK) | 继承自 BaseModel |
+| agent_name | String(50) | Agent 标识名 (如 "claude-code") |
+| native_session_id | String(255), nullable | CLI Agent 原生会话 ID |
+| title | String(255) | 会话标题，默认 "New Session" |
+| mode | String(20) | "plan" / "ask" / "code" |
+| source | String(50) | "playground" / "skill-editor" / "pipeline-editor" / "builtin-skill-editor" |
+| created_at | DateTime | 继承自 BaseModel (UTC) |
+| updated_at | DateTime | 继承自 BaseModel (UTC) |
+
+**设计决策**: Session 只存元数据，消息历史由 CLI Agent 自身管理（通过 native_session_id 关联恢复）。
+
+### AgentInfo (Dataclass, 非持久化)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| name | str | 唯一标识 (如 "claude-code") |
+| display_name | str | 显示名 (如 "Claude Code") |
+| icon | str | 图标标识 |
+| description | str | 简介 |
+| modes | list[AgentMode] | 支持的交互模式 |
+| available | bool | 是否可用（本机已安装） |
+| version | str? | CLI 版本号 |
+| provider | str? | 提供商 (如 "Anthropic") |
+| model | str? | 当前使用的模型 (动态读取) |
+| install_hint | str? | 安装指引 |
+| tools | list[str] | 内置工具列表 |
+| mcp_servers | list[str] | 已配置的 MCP 服务器 |
+
+## 3. REST API
+
+### GET /agents/available
+
+返回所有注册 Agent 的信息（含可用性检测）。
+
+- 缓存 60 秒（避免重复 subprocess 调用）
+- 各 adapter 并行检测，单个失败不影响其他
+
+**Response**: `AgentInfoResponse[]`
+
+### GET /agents/{name}/config
+
+读取 Agent 的实际配置文件并返回。
+
+- Claude Code: `~/.claude/settings.json`, `~/.claude/settings.local.json`
+- Codex: `~/.codex/config.toml`
+- 敏感值自动脱敏（token/key/secret/password/credential/auth 字段显示 `xxxx****xxxx`）
+
+**Response**: `dict` (结构因 agent 而异)
+
+### POST /agents/sessions
+
+创建新会话。
+
+**Request**: `{ agent_name, source, mode }`
+**Response**: `AgentSessionResponse` (201)
+
+### GET /agents/sessions
+
+会话列表，支持 `source` 过滤和分页。
+
+**Response**: `PaginatedResponse<AgentSessionResponse>`
+
+### GET /agents/sessions/{id}
+
+会话详情。
+
+### DELETE /agents/sessions/{id}
+
+删除会话 (204)。
+
+## 4. WebSocket 协议
+
+**Endpoint**: `WS /agents/sessions/{id}/ws`
+
+### 客户端 → 服务端
+
+```json
+{
+  "type": "message",
+  "content": "用户输入文本",
+  "mode": "ask",
+  "context": {
+    "type": "skill",
+    "skill": { "name": "...", "source_code": "..." },
+    "error_result": { "message": "..." },
+    "attachments": [{ "type": "text", "content": "..." }]
+  }
+}
+```
+
+### 服务端 → 客户端
+
+```json
+{ "type": "text",  "content": "...", "metadata": {} }
+{ "type": "code",  "content": "...", "metadata": {} }
+{ "type": "error", "content": "...", "metadata": {} }
+{ "type": "done",  "content": "",   "metadata": {} }
+```
+
+### 生命周期
+
+1. 客户端 connect → 服务端 accept
+2. 服务端验证 session 存在
+3. 循环: 接收 message → context_builder 组装 prompt → adapter.execute() 流式输出 → 发送 events → 发送 done
+4. 首次对话后提取 native_session_id 保存
+5. 自动更新 session title（取用户首条消息前 30 字符）
+
+### 重连
+
+前端 `AgentWebSocket` 类自动重连（最多 3 次，指数退避 1s/2s/3s）。
+
+## 5. Adapter 体系
+
+### BaseAgentAdapter (抽象基类)
+
+必须实现:
+- `is_available()` → 检查 CLI 是否已安装 (`shutil.which`)
+- `get_version()` → 获取版本号
+- `execute(request)` → 流式执行，yield AgentEvent
+- `extract_session_id(events)` → 从输出事件中提取原生 session ID
+
+可选覆盖:
+- `get_config()` → 读取配置文件
+- `get_tools()` → 获取内置工具列表
+- `get_mcp_servers()` → 获取 MCP 服务器列表
+
+### 当前 Adapter 实现
+
+| Adapter | CLI 命令 | 配置文件 | 执行方式 |
+|---------|---------|---------|---------|
+| claude_code | `claude` | `~/.claude/settings.json` | `claude --print --output-format stream-json` |
+| codex | `codex` | `~/.codex/config.toml` | `codex --quiet` |
+| copilot | `github-copilot-cli` | — | `github-copilot-cli` |
+
+### 执行隔离
+
+- `_stream_subprocess()` 工具函数负责子进程管理
+- stdin=DEVNULL 防止 CLI 等待输入
+- stderr 后台 drain 防止 buffer 死锁
+- 300s 超时保护
+- 环境变量清理: 剔除 `CLAUDECODE`/`CLAUDE_CODE_SESSION` 防止嵌套
+
+## 6. Context Builder
+
+`ContextBuilder.build()` 将结构化上下文组装为 prompt 前缀:
+
+- **skill 上下文**: Skill 名称、类型、源码、测试输入
+- **pipeline 上下文**: Pipeline 名称、状态、节点列表
+- **error 上下文**: 错误信息、traceback
+- **attachments**: 用户附加的文本/代码片段
+- **free 模式**: 直接返回用户原始 prompt
+
+## 7. 前端组件
+
+| 组件 | 位置 | 说明 |
+|------|------|------|
+| AgentPlayground | pages/ | 主页面: 左侧 Agent 列表 + 右侧聊天区 |
+| AgentHistory | pages/ | 独立 history 页面 (全量 session 列表) |
+| AgentChatWidget | components/agent/ | 可复用聊天组件 (Playground + 嵌入模式) |
+| AgentSelector | components/agent/ | Agent 卡片列表 + Mode 选择 |
+| AgentIcon | components/agent/ | Agent 图标徽章 (15+ agent 颜色映射) |
+| SessionBar | components/agent/ | 顶部 session 导航 (新建 + 最近列表) |
+| ModeBar | components/agent/ | 嵌入模式下的 Mode 切换栏 |
+| MessageBubble | components/agent/ | 聊天消息气泡 (Markdown 渲染) |
+| ContextPanel | components/agent/ | 嵌入模式下的上下文面板 |
+| AgentDetailPanel | components/agent/ | Agent 详情信息面板 |
+| ApplyActions | components/agent/ | 代码应用操作按钮 |
+
+### 嵌入模式
+
+AgentChatWidget 可嵌入 SkillEditor、PipelineEditor、BuiltinSkillEditor 等页面，
+通过 `source` 参数区分来源，自动附加当前编辑对象作为上下文。
+
+## 8. 社区 Agent 支持
+
+Settings 页面展示 25+ 社区 CLI Coding Agent（来源: OpenSpec supported-tools.md），
+包括: Claude Code, Codex, GitHub Copilot, Amazon Q, Gemini Code Assist,
+Cursor, Windsurf, Cline, Continue, RooCode, KiloCode, Kiro, Trae, Auggie, Qwen 等。
+
+- 已安装的 Agent 显示实际配置（从本地配置文件读取）
+- 未安装的 Agent 显示安装指引
+- "Involve Agent" 功能用于将新 Agent 引入系统
+
+## 9. 时间处理注意事项
+
+后端 SQLite `func.now()` 返回 UTC 时间，无时区标记（如 `2024-03-08T10:00:00`）。
+前端解析时必须追加 `Z` 后缀，否则在 UTC+N 时区会产生 N 小时偏移。
+
+```typescript
+const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+const time = new Date(utcStr);
+```

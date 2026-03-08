@@ -33,6 +33,7 @@ AI Agent 驱动的智能编排工作室，用于构建数据摄取管道（Data 
 | **Data Sources** | 16 种数据源类型（Local / Azure / AWS / Logic Apps 等） | CRUD、本地文件上传（配额管理）、连通性测试、Secret 掩码、过期清理 |
 | **Targets** | 6 种输出目标（AI Search / Blob / CosmosDB / Neo4j / MySQL / PostgreSQL） | CRUD、连通性测试、Schema 发现、索引管理、字段映射引擎（含图数据映射）、Writer 服务 |
 | **Runs** | Pipeline 执行记录管理 | CRUD（Phase 2 将实现完整执行引擎） |
+| **Agents** | CLI Coding Agent 集成 | 25+ 社区 Agent 注册发现、Session 管理、WebSocket 实时聊天、配置文件读取（敏感值脱敏）、Playground 交互式对话、Agent History |
 | **System** | 全局功能 | 健康检查、配置管理、CORS、临时文件定期清理 |
 
 ## 快速开始
@@ -161,6 +162,18 @@ npm run dev
 | POST | `/api/v1/runs` | 创建 Run 记录 |
 | GET | `/api/v1/runs/{id}` | Run 详情 |
 
+### Agents
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/agents/available` | 已注册 Agent 列表（含可用性检测） |
+| GET | `/api/v1/agents/{name}/config` | 读取 Agent 配置文件（敏感值脱敏） |
+| POST | `/api/v1/agents/sessions` | 创建 Agent 会话 |
+| GET | `/api/v1/agents/sessions` | 会话列表（分页，可按 source 过滤） |
+| GET | `/api/v1/agents/sessions/{id}` | 会话详情 |
+| DELETE | `/api/v1/agents/sessions/{id}` | 删除会话 |
+| WS | `/api/v1/agents/sessions/{id}/ws` | WebSocket 实时聊天 |
+
 ### 通用规范
 
 - **分页**: `?page=1&page_size=20` → `{ items, total, page, page_size, total_pages }`
@@ -183,8 +196,8 @@ npm run dev
 |------|---------|------|
 | `CLAUDE.md` | Claude Code / Agent | 开发流程、编码规范、提交检查、踩坑清单 |
 | `openspec/config.yaml` | 所有人 | 技术栈决策、spec 索引 |
-| `openspec/specs/` | 开发者 | 13 个模块的系统行为规格（GIVEN/WHEN/THEN） |
-| `openspec/changes/archive/` | 开发者 | 18 个已归档的变更（proposal → design → tasks） |
+| `openspec/specs/` | 开发者 | 17 个模块的系统行为规格（GIVEN/WHEN/THEN） |
+| `openspec/changes/archive/` | 开发者 | 23 个已归档的变更（proposal → design → tasks） |
 
 ## 关键设计决策
 

@@ -132,7 +132,7 @@ function loadLayouts(): Layouts | undefined {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return undefined;
     const saved = JSON.parse(raw) as Layouts;
-    // Ensure all current CARDS are present; merge missing ones from defaults
+    // Ensure all current CARDS are present; place missing cards below existing ones
     const defaults = makeDefaultLayouts();
     const allKeys = new Set(CARDS.map(c => c.key));
     for (const bp of Object.keys(defaults) as Array<keyof Layouts>) {
@@ -140,10 +140,18 @@ function loadLayouts(): Layouts | undefined {
         saved[bp] = defaults[bp];
         continue;
       }
-      const existing = new Set((saved[bp] as Layout[]).map(l => l.i));
+      const items = saved[bp] as Layout[];
+      const existing = new Set(items.map(l => l.i));
+      // Find the bottom edge of existing layout
+      let maxBottom = 0;
+      for (const l of items) {
+        maxBottom = Math.max(maxBottom, l.y + l.h);
+      }
       for (const dl of defaults[bp] as Layout[]) {
         if (allKeys.has(dl.i) && !existing.has(dl.i)) {
-          (saved[bp] as Layout[]).push(dl);
+          // Place new card at the bottom, keeping default x/w/h
+          items.push({ ...dl, y: maxBottom });
+          maxBottom += dl.h;
         }
       }
     }

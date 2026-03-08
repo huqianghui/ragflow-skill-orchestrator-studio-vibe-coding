@@ -26,6 +26,7 @@ specs:
   - targets/spec.md
   - unified-table-ui/spec.md
   - system/spec.md
+  - agents/spec.md
 
 decisions:
   target_users: business developers

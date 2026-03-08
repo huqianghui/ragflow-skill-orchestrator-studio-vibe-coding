@@ -259,6 +259,536 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "eJw5I",
+      "x": 0,
+      "y": 0,
+      "name": "Agentic RAGFlow Studio - Command Center",
+      "width": 1440,
+      "height": 900,
+      "fill": "#FAFAFA",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "4YEc8",
+          "name": "Top Bar",
+          "width": "fill_container",
+          "height": 76,
+          "fill": "#FFFFFF",
+          "padding": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "q9HCR",
+              "name": "Brand",
+              "width": "fill_container",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "arPvF",
+                  "name": "brandTitle",
+                  "fill": "#1A1A1A",
+                  "content": "Agentic RAGFlow Studio",
+                  "fontFamily": "Newsreader",
+                  "fontSize": 30,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "TQUgt",
+                  "name": "brandMeta",
+                  "fill": "#888888",
+                  "content": "COMMAND CENTER  |  ENV: PROD",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "yIMyY",
+              "name": "Actions",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "7QARI",
+                  "name": "Save",
+                  "height": 36,
+                  "fill": "#FFFFFF",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gdchk",
+                      "name": "saveText",
+                      "fill": "#666666",
+                      "content": "Save Draft",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x11VL",
+                  "name": "Run",
+                  "height": 36,
+                  "fill": "#0D6E6E",
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FL2NX",
+                      "name": "runText",
+                      "fill": "#FFFFFF",
+                      "content": "Run Pipeline",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tZIh2",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "gap": 16,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "KEpKa",
+              "name": "Node Library",
+              "width": 280,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "2Ss2N",
+                  "name": "libTitle",
+                  "fill": "#888888",
+                  "content": "NODE LIBRARY",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "V3PQd",
+                  "name": "libItem1",
+                  "fill": "#1A1A1A",
+                  "content": "Input / Connector / Retriever / Embed",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "0EH3I",
+              "name": "Pipeline Canvas",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F8F8F8",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fZlt8",
+                  "name": "canvasTitle",
+                  "fill": "#1A1A1A",
+                  "content": "Pipeline: Customer Support Agent",
+                  "fontFamily": "Newsreader",
+                  "fontSize": 20,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "rZODc",
+                  "name": "canvasHint",
+                  "fill": "#666666",
+                  "content": "Drag blocks to compose multi-step reasoning and retrieval flow.",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "NlQcn",
+                  "name": "Node Card",
+                  "width": "fill_container",
+                  "height": 100,
+                  "fill": "#FFFFFF",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vuu3g",
+                      "name": "nodeTitle",
+                      "fill": "#1A1A1A",
+                      "content": "Context Builder  ->  Reranker  ->  Answer Synthesizer",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "O7B5i",
+                      "name": "nodeState",
+                      "fill": "#E07B54",
+                      "content": "Status: Running (latency 842ms)",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tTZfp",
+              "name": "Properties",
+              "width": 320,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W7pzk",
+                  "name": "propTitle",
+                  "fill": "#888888",
+                  "content": "NODE PROPERTIES",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "mbVeJ",
+                  "name": "propField",
+                  "fill": "#1A1A1A",
+                  "content": "TopK: 8 | Temperature: 0.2 | Timeout: 30s",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "7cxUe",
+                  "name": "validationText",
+                  "fill": "#DC2626",
+                  "content": "Validation Error: output_schema is required.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "2gUSE",
+          "name": "Run Logs",
+          "width": "fill_container",
+          "height": 170,
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "DgJvK",
+              "name": "logsTitle",
+              "fill": "#888888",
+              "content": "RUN LOGS",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "26qvW",
+              "name": "log1",
+              "fill": "#AAAAAA",
+              "content": "[10:42:18] Empty state detected: no active run.",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "s49Tn",
+              "name": "log2",
+              "fill": "#0D6E6E",
+              "content": "[10:42:29] Success: pipeline execution completed.",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "UqYiR",
+      "x": 0,
+      "y": 0,
+      "name": "Agentic RAGFlow Studio - Mobile",
+      "width": 390,
+      "height": 844,
+      "fill": "#FAFAFA",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "2wTsa",
+          "name": "Mobile Top",
+          "width": "fill_container",
+          "height": 68,
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "padding": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "KxiLJ",
+              "name": "mTitle",
+              "fill": "#1A1A1A",
+              "content": "Agentic RAGFlow Studio",
+              "fontFamily": "Newsreader",
+              "fontSize": 22,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "G5TeI",
+              "name": "mMeta",
+              "fill": "#888888",
+              "content": "COMMAND CENTER",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "E1Rah",
+          "name": "Mobile Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "#FAFAFA",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LCsbN",
+              "name": "Mobile Canvas",
+              "width": "fill_container",
+              "height": 340,
+              "fill": "#F8F8F8",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "evOU7",
+                  "name": "mCanvasTitle",
+                  "fill": "#1A1A1A",
+                  "content": "Pipeline: Support Agent",
+                  "fontFamily": "Newsreader",
+                  "fontSize": 18,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "8a25Y",
+                  "name": "mCanvasText",
+                  "fill": "#666666",
+                  "content": "Tap to add node and connect retrieval chain.",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ORt2F",
+              "name": "State Row",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Wy3TJ",
+                  "name": "mStateEmpty",
+                  "fill": "#AAAAAA",
+                  "content": "Empty",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "JrSvC",
+                  "name": "mStateErr",
+                  "fill": "#DC2626",
+                  "content": "Error",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "tslkA",
+                  "name": "mStateRun",
+                  "fill": "#E07B54",
+                  "content": "Running",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "ktKMb",
+                  "name": "mStateOk",
+                  "fill": "#0D6E6E",
+                  "content": "Success",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HJ1rC",
+              "name": "Mobile Properties",
+              "width": "fill_container",
+              "height": 120,
+              "fill": "#FFFFFF",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uoJuk",
+                  "name": "mPropTitle",
+                  "fill": "#888888",
+                  "content": "NODE PROPERTIES",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "5Vh0t",
+                  "name": "mPropText",
+                  "fill": "#1A1A1A",
+                  "content": "TopK 8  |  Temp 0.2  |  Timeout 30s",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "s8Oyu",
+          "name": "Mobile Logs",
+          "width": "fill_container",
+          "height": 150,
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "skzET",
+              "name": "mLogTitle",
+              "fill": "#888888",
+              "content": "RUN LOGS",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "Z5sUc",
+              "name": "mLogLine",
+              "fill": "#0D6E6E",
+              "content": "[10:42:29] Success: pipeline execution completed.",
+              "fontFamily": "JetBrains Mono",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mvBsN",
+          "name": "Mobile Nav",
+          "width": "fill_container",
+          "height": 56,
+          "fill": "#FFFFFF",
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "XrUYl",
+              "name": "mNavText",
+              "fill": "#666666",
+              "content": "Canvas    Library    Properties    Run",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
     }
   ],
   "imports": {

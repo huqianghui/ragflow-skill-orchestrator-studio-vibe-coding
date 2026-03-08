@@ -33,6 +33,8 @@ specs:
   - page-header-component/spec.md
   - list-toolbar-component/spec.md
   - theme-system/spec.md
+  # Testing
+  - e2e-testing/spec.md
 
 decisions:
   target_users: business developers

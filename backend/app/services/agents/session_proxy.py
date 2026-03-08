@@ -1,15 +1,16 @@
-"""SessionProxy — thin proxy layer for agent session metadata."""
+"""SessionProxy — thin proxy layer for agent session metadata and messages."""
 
 import math
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.agent_message import AgentMessage
 from app.models.agent_session import AgentSession
 
 
 class SessionProxy:
-    """Manages session metadata only — message history is owned by CLI agents."""
+    """Manages session metadata and persisted chat messages."""
 
     async def create(
         self,
@@ -37,6 +38,7 @@ class SessionProxy:
         self,
         db: AsyncSession,
         source: str | None = None,
+        agent_name: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict:
@@ -46,6 +48,9 @@ class SessionProxy:
         if source:
             query = query.where(AgentSession.source == source)
             count_query = count_query.where(AgentSession.source == source)
+        if agent_name:
+            query = query.where(AgentSession.agent_name == agent_name)
+            count_query = count_query.where(AgentSession.agent_name == agent_name)
         query = query.order_by(AgentSession.updated_at.desc())
 
         # Get total count
@@ -80,14 +85,43 @@ class SessionProxy:
         await db.commit()
 
     async def delete(self, db: AsyncSession, session_id: str) -> bool:
-        """Delete a session. Returns True if found and deleted."""
+        """Delete a session and its messages. Returns True if found and deleted."""
         result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
         session = result.scalar_one_or_none()
         if session:
+            # Delete associated messages first
+            msgs = await db.execute(
+                select(AgentMessage).where(AgentMessage.session_id == session_id)
+            )
+            for msg in msgs.scalars().all():
+                await db.delete(msg)
             await db.delete(session)
             await db.commit()
             return True
         return False
+
+    # ------------------------------------------------------------------
+    # Message persistence
+    # ------------------------------------------------------------------
+
+    async def save_message(
+        self, db: AsyncSession, session_id: str, role: str, content: str
+    ) -> AgentMessage:
+        """Persist a single chat message."""
+        msg = AgentMessage(session_id=session_id, role=role, content=content)
+        db.add(msg)
+        await db.commit()
+        await db.refresh(msg)
+        return msg
+
+    async def get_messages(self, db: AsyncSession, session_id: str) -> list[AgentMessage]:
+        """Return all messages for a session, ordered by creation time."""
+        result = await db.execute(
+            select(AgentMessage)
+            .where(AgentMessage.session_id == session_id)
+            .order_by(AgentMessage.created_at.asc())
+        )
+        return list(result.scalars().all())
 
 
 session_proxy = SessionProxy()

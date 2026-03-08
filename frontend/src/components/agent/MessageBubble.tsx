@@ -46,45 +46,99 @@ export default function MessageBubble({
         maxWidth: '100%',
         wordBreak: 'break-word',
       }}>
-        {content ? (
-          <ReactMarkdown
-            components={{
-              code({ className, children, ...rest }) {
-                const match = /language-(\w+)/.exec(className || '');
-                const codeStr = String(children).replace(/\n$/, '');
-                if (match) {
-                  return (
-                    <div>
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{ borderRadius: 8, fontSize: 12 }}
-                      >
-                        {codeStr}
-                      </SyntaxHighlighter>
-                      <ApplyActions
-                        code={codeStr}
-                        showApply={showApply}
-                        onApply={onApplyCode ? () => onApplyCode(codeStr) : undefined}
-                      />
-                    </div>
-                  );
-                }
-                return <code className={className} {...rest}>{children}</code>;
-              },
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+        {streaming && !content ? (
+          <ThinkingIndicator />
+        ) : content ? (
+          <>
+            <ReactMarkdown
+              components={{
+                code({ className, children, ...rest }) {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const codeStr = String(children).replace(/\n$/, '');
+                  if (match) {
+                    return (
+                      <div>
+                        <SyntaxHighlighter
+                          style={oneDark}
+                          language={match[1]}
+                          PreTag="div"
+                          customStyle={{ borderRadius: 8, fontSize: 12 }}
+                        >
+                          {codeStr}
+                        </SyntaxHighlighter>
+                        <ApplyActions
+                          code={codeStr}
+                          showApply={showApply}
+                          onApply={onApplyCode ? () => onApplyCode(codeStr) : undefined}
+                        />
+                      </div>
+                    );
+                  }
+                  return <code className={className} {...rest}>{children}</code>;
+                },
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+            {streaming && <BlinkingCursor />}
+          </>
         ) : null}
-        {streaming && <BlinkingCursor />}
       </div>
     </div>
   );
 }
 
-/** CSS-animated blinking cursor indicator. */
+/** "Thinking..." animation with bouncing dots and a gradient progress bar. */
+function ThinkingIndicator() {
+  return (
+    <div style={{ padding: '4px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: '#555' }}>Thinking</span>
+        {[0, 1, 2].map(i => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-block',
+              width: 4,
+              height: 4,
+              borderRadius: '50%',
+              background: '#888',
+              animation: `thinking-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+      <div style={{
+        marginTop: 8,
+        height: 3,
+        borderRadius: 2,
+        background: '#f0f0f0',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          height: '100%',
+          borderRadius: 2,
+          background: 'linear-gradient(90deg, #1677ff, #69b1ff, #1677ff)',
+          backgroundSize: '200% 100%',
+          animation: 'thinking-bar 1.8s ease-in-out infinite',
+        }} />
+      </div>
+      <style>{`
+        @keyframes thinking-dot {
+          0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-3px); }
+        }
+        @keyframes thinking-bar {
+          0% { width: 0%; background-position: 0% 0; }
+          50% { width: 70%; background-position: 100% 0; }
+          100% { width: 100%; background-position: 0% 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** CSS-animated blinking cursor indicator (shown while content is streaming). */
 function BlinkingCursor() {
   return (
     <span

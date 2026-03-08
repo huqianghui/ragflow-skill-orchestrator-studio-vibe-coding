@@ -256,9 +256,37 @@ def upgrade() -> None:
             batch_op.f("ix_agent_configs_name"), ["name"], unique=True
         )
 
+    op.create_table(
+        "agent_messages",
+        sa.Column("session_id", sa.String(length=36), nullable=False),
+        sa.Column("role", sa.String(length=10), nullable=False),
+        sa.Column("content", sa.Text(), nullable=False, server_default=""),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    with op.batch_alter_table("agent_messages", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_agent_messages_session_id"), ["session_id"]
+        )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    with op.batch_alter_table("agent_messages", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_agent_messages_session_id"))
+    op.drop_table("agent_messages")
     with op.batch_alter_table("agent_configs", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_agent_configs_name"))
     op.drop_table("agent_configs")

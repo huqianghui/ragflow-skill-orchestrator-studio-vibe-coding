@@ -83,12 +83,13 @@ async def create_session(
 @router.get("/sessions")
 async def list_sessions(
     source: str | None = None,
+    agent_name: str | None = None,
     page: int = 1,
     page_size: int = 20,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """List sessions, optionally filtered by source."""
-    result = await session_proxy.list_sessions(db, source, page, page_size)
+    """List sessions, optionally filtered by source and/or agent_name."""
+    result = await session_proxy.list_sessions(db, source, agent_name, page, page_size)
     # Convert ORM objects to response dicts
     result["items"] = [AgentSessionResponse.model_validate(s) for s in result["items"]]
     return result
@@ -108,6 +109,24 @@ async def delete_session(session_id: str, db: AsyncSession = Depends(get_db)) ->
     if not deleted:
         raise NotFoundException("Session", session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/sessions/{session_id}/messages")
+async def get_session_messages(session_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """Return all persisted messages for a session, ordered by time."""
+    session = await session_proxy.get(db, session_id)
+    if not session:
+        raise NotFoundException("Session", session_id)
+    messages = await session_proxy.get_messages(db, session_id)
+    return [
+        {
+            "id": m.id,
+            "role": m.role,
+            "content": m.content,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in messages
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +167,10 @@ async def agent_chat_ws(websocket: WebSocket, session_id: str) -> None:
                 )
                 continue
 
+            # Persist user message
+            async with AsyncSessionLocal() as db:
+                await session_proxy.save_message(db, session_id, "user", msg.content)
+
             # Build request
             agent = registry.get(session.agent_name)
             context = AgentContext(**msg.context) if msg.context else None
@@ -161,6 +184,7 @@ async def agent_chat_ws(websocket: WebSocket, session_id: str) -> None:
 
             # Stream execute with error isolation
             events = []
+            assistant_text_parts: list[str] = []
             try:
                 async for event in agent.execute(request):
                     events.append(event)
@@ -171,6 +195,9 @@ async def agent_chat_ws(websocket: WebSocket, session_id: str) -> None:
                             "metadata": event.metadata,
                         }
                     )
+                    # Accumulate assistant text for persistence
+                    if event.type == "text" and event.content:
+                        assistant_text_parts.append(event.content)
             except Exception as exc:
                 logger.error("Agent execution failed: %s", exc, exc_info=True)
                 await websocket.send_json(
@@ -180,6 +207,12 @@ async def agent_chat_ws(websocket: WebSocket, session_id: str) -> None:
                         "metadata": {},
                     }
                 )
+
+            # Persist assistant response
+            assistant_text = "".join(assistant_text_parts)
+            if assistant_text:
+                async with AsyncSessionLocal() as db:
+                    await session_proxy.save_message(db, session_id, "assistant", assistant_text)
 
             # First conversation: extract and save native session id
             if not session.native_session_id:

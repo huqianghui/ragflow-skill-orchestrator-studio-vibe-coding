@@ -16,7 +16,7 @@ export const agentApi = {
       agent_name: agentName, source, mode,
     }).then(r => r.data),
 
-  listSessions: (params: { source?: string; page?: number; page_size?: number }) =>
+  listSessions: (params: { source?: string; agent_name?: string; page?: number; page_size?: number }) =>
     apiClient.get<PaginatedResponse<AgentSession>>('/agents/sessions', { params }).then(r => r.data),
 
   getSession: (id: string) =>
@@ -24,6 +24,11 @@ export const agentApi = {
 
   deleteSession: (id: string) =>
     apiClient.delete(`/agents/sessions/${id}`),
+
+  getSessionMessages: (id: string) =>
+    apiClient.get<{ id: string; role: string; content: string; created_at: string }[]>(
+      `/agents/sessions/${id}/messages`,
+    ).then(r => r.data),
 };
 
 // --- WebSocket ---

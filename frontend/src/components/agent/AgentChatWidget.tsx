@@ -160,13 +160,38 @@ export default function AgentChatWidget({
     prevAgentRef.current = selectedAgent;
   }, [selectedAgent]);
 
-  // Playground mode: handle sessionId changes
+  // Playground mode: handle sessionId changes (e.g. from History navigation)
   useEffect(() => {
     if (!embedded) {
       if (sessionId && sessionId !== currentSessionId) {
         wsRef.current.disconnect();
-        setMessages([]);
         setCurrentSessionId(sessionId);
+        // Load persisted messages from DB
+        agentApi.getSessionMessages(sessionId).then((msgs) => {
+          const loaded: ChatMessage[] = msgs.map((m, idx) => ({
+            id: `history-${m.id || idx}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: m.created_at ? new Date(m.created_at + 'Z').getTime() : Date.now(),
+          }));
+          if (loaded.length > 0) {
+            setMessages(loaded);
+          } else {
+            setMessages([{
+              id: `system-resume-${Date.now()}`,
+              role: 'assistant',
+              content: '**Session resumed** — send a message to continue the conversation.',
+              timestamp: Date.now(),
+            }]);
+          }
+        }).catch(() => {
+          setMessages([{
+            id: `system-resume-${Date.now()}`,
+            role: 'assistant',
+            content: '**Session resumed** — send a message to continue the conversation.',
+            timestamp: Date.now(),
+          }]);
+        });
       }
       if (!sessionId && currentSessionId) {
         wsRef.current.disconnect();

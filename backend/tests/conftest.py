@@ -30,6 +30,13 @@ app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture
+async def db_session():
+    """Yield a test DB session (same in-memory SQLite used by the API)."""
+    async with TestSessionLocal() as session:
+        yield session
+
+
+@pytest.fixture
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

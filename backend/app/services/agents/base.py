@@ -288,7 +288,13 @@ def _parse_json_event(data: dict) -> AgentEvent:
     """Convert a JSON line to AgentEvent. Adapters may override."""
     event_type = data.get("type", "text")
     # Try top-level content first, then nested message.content
-    raw_content = data.get("content", "") or data.get("message", {}).get("content", "")
+    raw_content = data.get("content", "")
+    if not raw_content:
+        msg = data.get("message")
+        if isinstance(msg, dict):
+            raw_content = msg.get("content", "")
+        elif isinstance(msg, str):
+            raw_content = msg
     return AgentEvent(type=event_type, content=_extract_text(raw_content), metadata=data)
 
 

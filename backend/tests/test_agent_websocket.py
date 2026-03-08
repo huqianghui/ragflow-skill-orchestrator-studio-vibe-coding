@@ -1,5 +1,6 @@
 """Tests for agent WebSocket endpoint."""
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,6 +18,12 @@ def _make_mock_session(session_id="test-session-123", agent_name="claude-code"):
     s.mode = "code"
     s.source = "playground"
     return s
+
+
+@asynccontextmanager
+async def _mock_db_session():
+    """Fake AsyncSessionLocal context manager for WebSocket tests."""
+    yield MagicMock()
 
 
 @pytest.mark.asyncio
@@ -49,8 +56,10 @@ async def test_ws_connect_valid_session(client):
     with (
         patch("app.api.agents.session_proxy") as mock_sp,
         patch("app.api.agents.registry") as mock_registry,
+        patch("app.api.agents.AsyncSessionLocal", side_effect=_mock_db_session),
     ):
         mock_sp.get = AsyncMock(return_value=mock_session)
+        mock_sp.save_message = AsyncMock()
         mock_sp.update_native_id = AsyncMock()
         mock_sp.update_title = AsyncMock()
 

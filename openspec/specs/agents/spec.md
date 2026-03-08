@@ -12,7 +12,8 @@
                  │ REST + WebSocket
 ┌────────────────▼────────────────────────────┐
 │ Backend: api/agents.py                       │
-│   ├── GET /available       (发现)            │
+│   ├── GET /available       (发现, DB 查询)    │
+│   ├── POST /refresh        (手动刷新探测)     │
 │   ├── GET /{name}/config   (配置读取)        │
 │   ├── CRUD /sessions       (会话管理)        │
 │   └── WS /sessions/{id}/ws (实时聊天)        │
@@ -46,33 +47,50 @@
 
 **设计决策**: Session 只存元数据，消息历史由 CLI Agent 自身管理（通过 native_session_id 关联恢复）。
 
-### AgentInfo (Dataclass, 非持久化)
+### AgentConfig (ORM — 持久化缓存)
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| name | str | 唯一标识 (如 "claude-code") |
-| display_name | str | 显示名 (如 "Claude Code") |
-| icon | str | 图标标识 |
-| description | str | 简介 |
-| modes | list[AgentMode] | 支持的交互模式 |
-| available | bool | 是否可用（本机已安装） |
-| version | str? | CLI 版本号 |
-| provider | str? | 提供商 (如 "Anthropic") |
-| model | str? | 当前使用的模型 (动态读取) |
-| install_hint | str? | 安装指引 |
-| tools | list[str] | 内置工具列表 |
-| mcp_servers | list[str] | 已配置的 MCP 服务器 |
+Agent 的发现结果持久化到 `agent_configs` 表，API 直接查 DB 返回（毫秒级）。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| id | UUID (PK) | 继承自 BaseModel |
+| name | String(50), unique | Agent 标识名 (如 "claude-code") |
+| display_name | String(100) | 显示名 |
+| icon | String(50) | 图标标识 |
+| description | Text | 简介 |
+| modes | JSON | 支持的交互模式列表 |
+| available | Boolean | 是否可用（本机已安装） |
+| version | String(100), nullable | CLI 版本号 |
+| provider | String(100), nullable | 提供商 |
+| model | String(100), nullable | 当前使用的模型 |
+| install_hint | String(255), nullable | 安装指引 |
+| tools | JSON | 内置工具列表 |
+| mcp_servers | JSON | 已配置的 MCP 服务器 |
+| updated_at | DateTime | 最近一次探测时间 |
+
+**刷新机制**: 启动时 seed → 每 120 秒后台定时探测 CLI 状态并 upsert。
+
+### AgentInfo (Dataclass — 内存传输)
+
+与 AgentConfig 字段一一对应，用于 registry 内部和 API 响应构建。
 
 ## 3. REST API
 
 ### GET /agents/available
 
-返回所有注册 Agent 的信息（含可用性检测）。
+返回所有注册 Agent 的信息（DB 查询，毫秒级）。
 
-- 缓存 60 秒（避免重复 subprocess 调用）
-- 各 adapter 并行检测，单个失败不影响其他
+- 读取 `agent_configs` 表，5 秒内存缓存避免高频 DB 查询
+- DB 为空时（首次启动 seed 尚未完成）自动触发同步探测
+- 后台任务每 120 秒自动探测 CLI 状态并更新 DB
 
 **Response**: `AgentInfoResponse[]`
+
+### POST /agents/refresh
+
+手动触发 agent 可用性刷新（探测所有 CLI adapter 并 upsert DB）。
+
+**Response**: `{ "status": "refreshed" }`
 
 ### GET /agents/{name}/config
 
@@ -207,6 +225,25 @@
 
 AgentChatWidget 可嵌入 SkillEditor、PipelineEditor、BuiltinSkillEditor 等页面，
 通过 `source` 参数区分来源，自动附加当前编辑对象作为上下文。
+
+#### 嵌入模式 Agent 信息展示
+
+嵌入式 Agent Assistant（编辑器内联模式）SHALL 只显示精简的 Agent 信息。
+
+- **WHEN** AgentChatWidget 以 embedded=true 模式渲染
+- **THEN** 不显示 AgentDetailPanel（Tools 列表、MCP Servers 列表）
+- **AND** 只在 AgentSelector 中显示 agent 名称和 ON/OFF 状态
+- **WHEN** AgentChatWidget 以 embedded=false 模式渲染（Playground 页面）
+- **THEN** 保持现有行为，显示完整 Agent 信息
+
+#### 嵌入模式 Mode 过滤
+
+嵌入式 Agent Assistant SHALL 不提供 Plan 模式。
+
+- **WHEN** AgentChatWidget 以 embedded=true 模式渲染
+- **THEN** Mode 选择器只显示 Ask 和 Code（过滤掉 Plan），默认选中 Ask 模式
+- **WHEN** 过滤后 agent 只支持一种 mode
+- **THEN** 隐藏 Mode 选择器，直接使用该唯一 mode
 
 ## 8. 社区 Agent 支持
 

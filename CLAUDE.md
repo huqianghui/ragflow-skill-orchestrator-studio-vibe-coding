@@ -59,14 +59,16 @@ backend/
   app/
     api/           # FastAPI 路由: health, skills, connections, pipelines,
                    #   runs, targets, data_sources, agents
-    models/        # SQLAlchemy ORM 模型 (含 agent_session)
-    schemas/       # Pydantic 请求/响应 schema (含 agent)
+    models/        # SQLAlchemy ORM: connection, skill, pipeline, run,
+                   #   data_source, target, agent_session, agent_config
+    schemas/       # Pydantic 请求/响应 schema:
+                   #   skill, connection, pipeline, run, data_source, target, agent, common
     services/      # 业务逻辑层
                    #   skill_runner, venv_manager, skill_seeder, skill_context
                    #   upload_manager, temp_file_manager
                    #   data_source_tester, target_tester, target_writer
                    #   target_index_manager, target_schema_discovery, mapping_engine
-                   #   builtin_skills/ (base, runner, 6 类内置 Skill 实现)
+                   #   builtin_skills/ (base, runner, 7 类内置 Skill 实现)
                    #   pipeline/ (enrichment_tree, runner)
                    #   agents/ (base, registry, session_proxy, context_builder,
                    #            adapters/: claude_code, codex, copilot)
@@ -74,9 +76,9 @@ backend/
     data/          # 内置数据定义 (builtin_skills, pipeline_templates, pipeline_defaults)
     config.py      # pydantic-settings 配置
     database.py    # 异步引擎 & session 工厂
-    main.py        # FastAPI app, lifespan, 路由注册
+    main.py        # FastAPI app, lifespan, 路由注册, 后台刷新任务
   alembic/         # 数据库迁移脚本
-  tests/           # pytest 测试
+  tests/           # pytest 测试 (24 个测试文件)
   data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
@@ -86,11 +88,14 @@ frontend/
                    #   BuiltinSkillEditor, Connections, Pipelines, PipelineEditor,
                    #   DataSources, DataSourceNew, Targets, TargetNew,
                    #   RunHistory, Settings, AgentPlayground, AgentHistory)
-    components/    # 可复用 UI 组件 (AppLayout, TableUtils, ConfigSchemaForm)
+    components/    # 可复用 UI 组件:
+                   #   AppLayout, PageHeader, ListToolbar, TableUtils,
+                   #   ConfigSchemaForm, ThemeSwitcher
                    #   agent/ (AgentChatWidget, AgentSelector, AgentIcon,
                    #           SessionBar, ModeBar, MessageBubble, ContextPanel,
                    #           AgentDetailPanel, ApplyActions)
     services/      # API 客户端 (axios): api.ts, agentApi.ts
+    stores/        # Zustand 状态管理: themeStore.ts
     types/         # TypeScript 类型定义: index.ts, agent.ts
   public/
     icons/         # SVG 图标 (data-sources/, targets/)

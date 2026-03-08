@@ -11,13 +11,18 @@ Python Code Skill 的全页面编辑器，提供代码编写、Connection 绑定
 - **WHEN** 用户访问 /skills/new 或 /skills/{id}/edit
 - **THEN** 页面分为左右两栏:
   - 左栏: Skill 基本信息卡片 + 预加载导入折叠面板 + Monaco 代码编辑器
-  - 右栏: Connection Mappings + Additional Requirements + Test Input + Test Output
+  - 右栏: 互斥面板模式（Config 和 Agent 共享同一列）:
+    - Config 面板: Collapse 折叠面板，包含 Connection Mappings、Additional Requirements、Test Input & Output
+    - Agent 面板: AgentChatWidget（通过 Agent 按钮 toggle 切换）
 
 #### Scenario: 顶部操作栏
 
-- **THEN** 显示 Back 按钮、页面标题 ("New Python Skill" 或 "Edit: {name}")、Save 按钮
+- **THEN** 显示 Back 按钮、页面标题 ("New Python Skill" 或 "Edit: {name}")、Agent 按钮、Save 按钮
+- **AND** Agent 按钮点击时切换右侧面板到 Agent Assistant
 - **AND** 未保存修改时 Back 按钮弹出确认对话框
 - **AND** 浏览器关闭/刷新时触发 beforeunload 警告
+
+> **已移除**: Agent Drawer 浮层模式 — Agent Assistant 改为右侧互斥面板，Agent 按钮控制面板 toggle
 
 ### Requirement: Skill 基本信息 [Phase 1 - 已实现]
 

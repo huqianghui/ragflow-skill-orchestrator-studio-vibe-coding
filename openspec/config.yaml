@@ -13,20 +13,26 @@ tech_stack:
   auth: none  # MVP single-user mode
 
 specs:
+  # Backend modules
   - skills/spec.md
   - connections/spec.md
-  - skill-library-ui/spec.md
-  - skill-editor-ui/spec.md
-  - executable-builtin-skills/spec.md
   - pipelines/spec.md
   - pipeline-orchestration/spec.md
-  - pipeline-editor-ui/spec.md
   - datasources/spec.md
   - runs/spec.md
   - targets/spec.md
-  - unified-table-ui/spec.md
-  - system/spec.md
   - agents/spec.md
+  - executable-builtin-skills/spec.md
+  - system/spec.md
+  # Frontend UI
+  - skill-library-ui/spec.md
+  - skill-editor-ui/spec.md
+  - pipeline-editor-ui/spec.md
+  - editor-accordion-layout/spec.md
+  - unified-table-ui/spec.md
+  - page-header-component/spec.md
+  - list-toolbar-component/spec.md
+  - theme-system/spec.md
 
 decisions:
   target_users: business developers

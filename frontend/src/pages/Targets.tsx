@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, message, Popconfirm, Space, Table, Tag } from 'antd';
+import { Button, Card, Form, Input, message, Modal, Popconfirm, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Target, TargetType } from '../types';
@@ -36,12 +36,62 @@ const TYPE_LABELS: Record<string, string> = {
   postgresql: 'PostgreSQL',
 };
 
+// ── Config fields for edit modal ──
+const CONFIG_FIELDS: Record<string, Array<{ name: string; label: string; secret?: boolean; required?: boolean }>> = {
+  azure_ai_search: [
+    { name: 'endpoint', label: 'Endpoint', required: true },
+    { name: 'api_key', label: 'API Key', secret: true, required: true },
+    { name: 'index_name', label: 'Index Name' },
+  ],
+  azure_blob: [
+    { name: 'connection_string', label: 'Connection String', secret: true, required: true },
+    { name: 'container_name', label: 'Container Name', required: true },
+    { name: 'output_path_template', label: 'Output Path Template' },
+    { name: 'content_format', label: 'Content Format' },
+  ],
+  cosmosdb_gremlin: [
+    { name: 'endpoint', label: 'Endpoint', required: true },
+    { name: 'primary_key', label: 'Primary Key', secret: true, required: true },
+    { name: 'database', label: 'Database', required: true },
+    { name: 'graph', label: 'Graph', required: true },
+    { name: 'partition_key', label: 'Partition Key', required: true },
+  ],
+  neo4j: [
+    { name: 'uri', label: 'URI', required: true },
+    { name: 'username', label: 'Username', required: true },
+    { name: 'password', label: 'Password', secret: true, required: true },
+    { name: 'database', label: 'Database' },
+  ],
+  mysql: [
+    { name: 'host', label: 'Host', required: true },
+    { name: 'port', label: 'Port' },
+    { name: 'username', label: 'Username', required: true },
+    { name: 'password', label: 'Password', secret: true, required: true },
+    { name: 'database', label: 'Database', required: true },
+    { name: 'table_name', label: 'Table Name', required: true },
+  ],
+  postgresql: [
+    { name: 'host', label: 'Host', required: true },
+    { name: 'port', label: 'Port' },
+    { name: 'username', label: 'Username', required: true },
+    { name: 'password', label: 'Password', secret: true, required: true },
+    { name: 'database', label: 'Database', required: true },
+    { name: 'schema_name', label: 'Schema' },
+    { name: 'table_name', label: 'Table Name', required: true },
+  ],
+};
+
 export default function Targets() {
   const navigate = useNavigate();
   const [targets, setTargets] = useState<Target[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [testingId, setTestingId] = useState<string | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<Target | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [form] = Form.useForm();
 
   // Search
   const [searchText, setSearchText] = useState('');
@@ -102,6 +152,46 @@ export default function Targets() {
     }
   };
 
+  const openEdit = (target: Target) => {
+    setEditingTarget(target);
+    form.setFieldsValue({
+      name: target.name,
+      description: target.description || '',
+      ...target.connection_config,
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingTarget) return;
+    try {
+      const values = await form.validateFields();
+      setEditLoading(true);
+
+      const fields = CONFIG_FIELDS[editingTarget.target_type] || [];
+      const config: Record<string, string> = {};
+      for (const f of fields) {
+        if (values[f.name]) {
+          config[f.name] = values[f.name];
+        }
+      }
+
+      await targetsApi.update(editingTarget.id, {
+        name: values.name,
+        description: values.description || null,
+        connection_config: Object.keys(config).length > 0 ? config : undefined,
+      });
+      message.success('Target updated');
+      setEditOpen(false);
+      fetchTargets();
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) return;
+      message.error('Failed to update target');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const columns: ColumnsType<Target> = [
     {
       title: 'Name',
@@ -113,7 +203,11 @@ export default function Targets() {
         width: colWidths.name,
         onResize: handleResize('name', 100),
       }),
-      render: (name: string) => <OverflowPopover text={name} />,
+      render: (name: string, record: Target) => (
+        <a onClick={() => openEdit(record)}>
+          <OverflowPopover text={name} />
+        </a>
+      ),
     },
     {
       title: 'Type',
@@ -155,7 +249,7 @@ export default function Targets() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 180,
+      width: 220,
       render: (_, record) => (
         <Space>
           <Button
@@ -165,6 +259,9 @@ export default function Targets() {
             onClick={() => handleTest(record.id)}
           >
             Test
+          </Button>
+          <Button type="link" size="small" onClick={() => openEdit(record)}>
+            Edit
           </Button>
           <Popconfirm
             title="Delete this target?"
@@ -178,6 +275,8 @@ export default function Targets() {
       ),
     },
   ];
+
+  const editFields = editingTarget ? (CONFIG_FIELDS[editingTarget.target_type] || []) : [];
 
   return (
     <div>
@@ -202,7 +301,7 @@ export default function Targets() {
           loading={loading}
           components={{ header: { cell: ResizableTitle } }}
           tableLayout="fixed"
-          scroll={{ x: colWidths.name + 200 + 100 + 160 + 180 }}
+          scroll={{ x: colWidths.name + 200 + 100 + 160 + 220 }}
           pagination={{
             total: filteredTargets.length !== targets.length ? filteredTargets.length : total,
             pageSize: 20,
@@ -212,6 +311,48 @@ export default function Targets() {
           }}
         />
       </Card>
+
+      <Modal
+        title="Edit Target"
+        open={editOpen}
+        onCancel={() => { setEditOpen(false); form.resetFields(); }}
+        onOk={handleEditSubmit}
+        confirmLoading={editLoading}
+        okText="Update"
+        destroyOnClose
+        width={560}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="name"
+            label="Name"
+            rules={[{ required: true, message: 'Please enter a name' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label="Description">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          {editingTarget && (
+            <Form.Item label="Type">
+              <Input value={TYPE_LABELS[editingTarget.target_type] || editingTarget.target_type} disabled />
+            </Form.Item>
+          )}
+          {editFields.map((field) => (
+            <Form.Item
+              key={field.name}
+              name={field.name}
+              label={field.label}
+              rules={field.required ? [{ required: true, message: `Please enter ${field.label}` }] : undefined}
+            >
+              <Input
+                placeholder={field.secret ? 'Leave empty to keep current value' : `Enter ${field.label}`}
+                type={field.secret ? 'password' : 'text'}
+              />
+            </Form.Item>
+          ))}
+        </Form>
+      </Modal>
     </div>
   );
 }

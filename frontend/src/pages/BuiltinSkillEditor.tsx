@@ -249,6 +249,7 @@ export default function BuiltinSkillEditor() {
             extra={
               <Space>
                 <Button
+                  type={showAgent ? 'primary' : 'default'}
                   icon={<RobotOutlined />}
                   onClick={() => {
                   setShowAgent(prev => {
@@ -877,6 +878,7 @@ export default function BuiltinSkillEditor() {
           extra={
             <Space>
               <Button
+                type={showAgent ? 'primary' : 'default'}
                 icon={<RobotOutlined />}
                 onClick={() => {
                   setShowAgent(prev => {

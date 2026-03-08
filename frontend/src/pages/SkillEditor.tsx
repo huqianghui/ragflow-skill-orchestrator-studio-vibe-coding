@@ -279,6 +279,7 @@ export default function SkillEditor() {
           extra={
             <Space>
               <Button
+                type={showAgent ? 'primary' : 'default'}
                 icon={<RobotOutlined />}
                 onClick={() => {
                   setShowAgent(prev => {

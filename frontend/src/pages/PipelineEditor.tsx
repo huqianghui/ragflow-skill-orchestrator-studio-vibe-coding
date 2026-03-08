@@ -610,6 +610,7 @@ export default function PipelineEditor() {
             </>
           )}
           <Button
+            type={showAgent ? 'primary' : 'default'}
             icon={<RobotOutlined />}
             onClick={() => setShowAgent(prev => !prev)}
           >
@@ -908,12 +909,16 @@ function EditMode({
     setSelectedNodeId(node.id);
     setSidebarTab('config');
     setSidebarCollapsed(false);
-  }, [setSelectedNodeId]);
+    // Switch away from Agent panel to show node config
+    if (showAgent && onToggleAgent) onToggleAgent();
+  }, [setSelectedNodeId, showAgent, onToggleAgent]);
 
   const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null);
     setSidebarTab('skills');
-  }, [setSelectedNodeId]);
+    // Switch away from Agent panel to show Add Skill
+    if (showAgent && onToggleAgent) onToggleAgent();
+  }, [setSelectedNodeId, showAgent, onToggleAgent]);
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId) ?? null;
   const selectedSkill = selectedNode

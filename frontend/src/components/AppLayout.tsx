@@ -7,10 +7,12 @@ import {
   HistoryOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MessageOutlined,
   NodeIndexOutlined,
   SendOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { Button, Layout, Menu, theme } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -19,7 +21,7 @@ import { getThemeByKey } from '../themes';
 
 const { Sider, Header, Content } = Layout;
 
-const menuItems = [
+const menuItems: MenuProps['items'] = [
   { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/skills', icon: <ExperimentOutlined />, label: 'Skill Library' },
   { key: '/connections', icon: <ApiOutlined />, label: 'Connections' },
@@ -27,6 +29,10 @@ const menuItems = [
   { key: '/data-sources', icon: <DatabaseOutlined />, label: 'Data Sources' },
   { key: '/targets', icon: <SendOutlined />, label: 'Targets' },
   { key: '/runs', icon: <HistoryOutlined />, label: 'Run History' },
+  { type: 'divider' },
+  { key: '/playground', icon: <MessageOutlined />, label: 'Agent Playground' },
+  { key: '/playground/history', icon: <HistoryOutlined />, label: 'Agent History' },
+  { type: 'divider' },
   { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
 ];
 
@@ -102,7 +108,7 @@ export default function AppLayout() {
           mode="inline"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => { if (key) navigate(key); }}
         />
       </Sider>
       <Layout>

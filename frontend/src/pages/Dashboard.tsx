@@ -7,6 +7,7 @@ import {
   ExperimentOutlined,
   HistoryOutlined,
   NodeIndexOutlined,
+  RobotOutlined,
   SendOutlined,
 } from '@ant-design/icons';
 import { Responsive, useContainerWidth } from 'react-grid-layout';
@@ -21,6 +22,7 @@ import {
   skillsApi,
   targetsApi,
 } from '../services/api';
+import { agentApi } from '../services/agentApi';
 
 const { Title, Text } = Typography;
 
@@ -84,6 +86,14 @@ const CARDS: CardDef[] = [
     color: '#faad14',
     bg: '#fffbe6',
   },
+  {
+    key: 'agents',
+    title: 'Agents',
+    path: '/playground',
+    icon: <RobotOutlined />,
+    color: '#eb2f96',
+    bg: '#fff0f6',
+  },
 ];
 
 function makeDefaultLayouts(): Layouts {
@@ -112,12 +122,32 @@ interface Stats {
   datasources: number | null;
   targets: number | null;
   runhistory: number | null;
+  agents: number | null;
+  availableAgents: number | null;
+  unavailableAgents: number | null;
 }
 
 function loadLayouts(): Layouts | undefined {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Layouts;
+    if (!raw) return undefined;
+    const saved = JSON.parse(raw) as Layouts;
+    // Ensure all current CARDS are present; merge missing ones from defaults
+    const defaults = makeDefaultLayouts();
+    const allKeys = new Set(CARDS.map(c => c.key));
+    for (const bp of Object.keys(defaults) as Array<keyof Layouts>) {
+      if (!saved[bp]) {
+        saved[bp] = defaults[bp];
+        continue;
+      }
+      const existing = new Set((saved[bp] as Layout[]).map(l => l.i));
+      for (const dl of defaults[bp] as Layout[]) {
+        if (allKeys.has(dl.i) && !existing.has(dl.i)) {
+          (saved[bp] as Layout[]).push(dl);
+        }
+      }
+    }
+    return saved;
   } catch { /* ignore */ }
   return undefined;
 }
@@ -135,6 +165,7 @@ export default function Dashboard() {
     skills: null, builtinSkills: null, customSkills: null,
     connections: null, pipelines: null,
     datasources: null, targets: null, runhistory: null,
+    agents: null, availableAgents: null, unavailableAgents: null,
   });
   const [loading, setLoading] = useState(true);
   const [layouts, setLayouts] = useState<Layouts>(
@@ -147,7 +178,7 @@ export default function Dashboard() {
       try {
         const [
           skillsResp, pipelinesResp, connectionsResp,
-          dsResp, targetsResp, runsResp,
+          dsResp, targetsResp, runsResp, agentsList,
         ] = await Promise.all([
           skillsApi.list(1, 50),
           pipelinesApi.list(1, 10),
@@ -155,8 +186,10 @@ export default function Dashboard() {
           dataSourcesApi.list(1, 1),
           targetsApi.list(1, 1),
           runsApi.list(1, 1),
+          agentApi.getAvailable().catch(() => []),
         ]);
         const allSkills = skillsResp.items;
+        const availableCount = agentsList.filter(a => a.available).length;
         setStats({
           skills: skillsResp.total,
           builtinSkills: allSkills.filter(s => s.is_builtin).length,
@@ -166,6 +199,9 @@ export default function Dashboard() {
           datasources: dsResp.total,
           targets: targetsResp.total,
           runhistory: runsResp.total,
+          agents: agentsList.length,
+          availableAgents: availableCount,
+          unavailableAgents: agentsList.length - availableCount,
         });
       } catch { /* cards show '-' */ } finally {
         setLoading(false);
@@ -198,6 +234,18 @@ export default function Dashboard() {
         <span style={{ display: 'flex', gap: 4, marginTop: 4 }}>
           <Tag color="blue" style={{ margin: 0 }}>{stats.builtinSkills ?? 0} built-in</Tag>
           <Tag color="green" style={{ margin: 0 }}>{stats.customSkills ?? 0} custom</Tag>
+        </span>
+      );
+    }
+    if (key === 'agents') {
+      return (
+        <span style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+          <Tag color="success" style={{ margin: 0 }}>
+            {stats.availableAgents ?? 0} online
+          </Tag>
+          <Tag color="default" style={{ margin: 0 }}>
+            {stats.unavailableAgents ?? 0} offline
+          </Tag>
         </span>
       );
     }

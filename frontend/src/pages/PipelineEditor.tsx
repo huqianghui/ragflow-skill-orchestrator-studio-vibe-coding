@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Button, Card, Empty, Input, Modal, Select, Space, Spin,
+  Button, Card, Drawer, Empty, Input, Modal, Select, Space, Spin,
   Tag, Tooltip, Typography, Upload, message, theme,
 } from 'antd';
 import {
@@ -9,7 +9,7 @@ import {
   CodeOutlined, DeleteOutlined, DownloadOutlined, EditOutlined,
   FileTextOutlined, ImportOutlined, InboxOutlined,
   LinkOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  PlusOutlined, SaveOutlined, UploadOutlined,
+  PlusOutlined, RobotOutlined, SaveOutlined, UploadOutlined,
 } from '@ant-design/icons';
 import {
   ReactFlow, Background, Controls, MiniMap, ReactFlowProvider,
@@ -24,6 +24,8 @@ import type {
   PipelineNode, Skill,
 } from '../types';
 import { pipelinesApi } from '../services/api';
+import type { PipelineAction } from '../types/agent';
+import AgentChatWidget from '../components/agent/AgentChatWidget';
 
 const { Title, Text, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -393,6 +395,7 @@ export default function PipelineEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
 
   // Debug state
   const [debugFile, setDebugFile] = useState<File | null>(null);
@@ -578,6 +581,9 @@ export default function PipelineEditor() {
               </Button>
             </>
           )}
+          <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+            Agent
+          </Button>
           <Button
             type={mode === 'debug' ? 'primary' : 'default'}
             icon={<BugOutlined />}
@@ -633,6 +639,51 @@ export default function PipelineEditor() {
         onApply={handleJsonApply}
         onCancel={() => setJsonModalOpen(false)}
       />
+
+      <Drawer
+        title="Agent Assistant"
+        placement="right"
+        width={400}
+        mask={false}
+        open={agentDrawerOpen}
+        onClose={() => setAgentDrawerOpen(false)}
+      >
+        <AgentChatWidget
+          embedded
+          autoContext={{
+            type: 'pipeline',
+            data: { nodes, name: pipeline.name },
+            selectedNode: selectedNodeId ?? undefined,
+          }}
+          onApplyPipelineAction={(action: PipelineAction) => {
+            if (action.action === 'add_node') {
+              setNodes(prev => {
+                const newNode: PipelineNode = {
+                  id: `node_${Date.now()}`,
+                  skill_name: action.skill_name,
+                  label: action.skill_name,
+                  position: action.position ?? prev.length,
+                  context: '',
+                  inputs: [],
+                  outputs: [],
+                  config_overrides: action.config_overrides || {},
+                };
+                return [...prev, newNode];
+              });
+              message.success('Node added');
+            } else if (action.action === 'update_node') {
+              updateNode(action.node_id, action.changes);
+              message.success('Node updated');
+            } else if (action.action === 'remove_node') {
+              removeNode(action.node_id);
+              message.success('Node removed');
+            } else if (action.action === 'update_config') {
+              updateNode(action.node_id, { config_overrides: action.config_overrides });
+              message.success('Config updated');
+            }
+          }}
+        />
+      </Drawer>
     </div>
   );
 }

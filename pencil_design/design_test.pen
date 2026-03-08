@@ -1,0 +1,270 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "V03ZV",
+      "x": 0,
+      "y": 0,
+      "name": "Pipeline Editor - Desktop",
+      "width": 1440,
+      "height": 900,
+      "fill": "#F6F8FB",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Sx9nl",
+          "name": "Top Bar",
+          "width": "fill_container",
+          "height": 64,
+          "fill": "#FFFFFF",
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "KW5Kq",
+              "name": "headerTitle2",
+              "fill": "#1F2937",
+              "content": "Pipeline Editor",
+              "fontFamily": "Inter",
+              "fontSize": 24,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mTsVq",
+          "name": "Main Wrap",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "#F6F8FB",
+          "children": [
+            {
+              "type": "frame",
+              "id": "N9P15",
+              "name": "Node Library",
+              "width": 280,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "layout": "vertical",
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hYZQ5",
+                  "name": "leftTitle2",
+                  "fill": "#1F2937",
+                  "content": "Node Library",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tTPeJ",
+              "name": "Canvas Center",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "#F3F6FA",
+              "layout": "vertical",
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JK79w",
+                  "name": "canvasHint2",
+                  "fill": "#667085",
+                  "content": "Drag nodes here to build workflow",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cf06C",
+              "name": "Properties",
+              "width": 340,
+              "height": "fill_container",
+              "fill": "#FFFFFF",
+              "layout": "vertical",
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "R3a93",
+                  "name": "rightTitle2",
+                  "fill": "#1F2937",
+                  "content": "Node Properties",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "RMCG2",
+                  "name": "rightError2",
+                  "fill": "#DC2626",
+                  "content": "Validation Error: Missing input mapping",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bNd6k",
+          "name": "Run Logs",
+          "width": "fill_container",
+          "height": 180,
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "59Q55",
+              "name": "logTitle2",
+              "fill": "#1F2937",
+              "content": "Logs",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "JNxZi",
+              "name": "statusIdle2",
+              "fill": "#667085",
+              "content": "Status: Idle",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "MprAA",
+              "name": "statusRun2",
+              "fill": "#2563EB",
+              "content": "Running: node_3 executing...",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "Fxbi5",
+              "name": "statusOk2",
+              "fill": "#16A34A",
+              "content": "Success: Run completed",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "z3ajt",
+      "x": 0,
+      "y": 0,
+      "name": "Pipeline Editor - Mobile",
+      "width": 390,
+      "height": 844,
+      "fill": "#F6F8FB",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "My5QJ",
+          "name": "Mobile Header",
+          "width": "fill_container",
+          "height": 56,
+          "fill": "#FFFFFF",
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "8l9p0",
+              "name": "mTitle2",
+              "fill": "#1F2937",
+              "content": "Pipeline",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "jkwJ6",
+          "name": "Mobile Canvas",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "#F3F6FA",
+          "layout": "vertical",
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "V1iBG",
+              "name": "mHint2",
+              "fill": "#667085",
+              "content": "Canvas / Library / Properties",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VcDjn",
+          "name": "Mobile Logs Drawer",
+          "width": "fill_container",
+          "height": 184,
+          "fill": "#FFFFFF",
+          "layout": "vertical",
+          "padding": 12
+        },
+        {
+          "type": "frame",
+          "id": "8aych",
+          "name": "Bottom Nav",
+          "width": "fill_container",
+          "height": 56,
+          "fill": "#FFFFFF",
+          "padding": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "e7ldJ",
+              "name": "mNavText2",
+              "fill": "#1F2937",
+              "content": "Canvas  Library  Properties  Run",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "imports": {
+    "3": "pencil:lunaris.lib.pen",
+    "T": "pencil:shadcn.lib.pen",
+    "U": "pencil:halo.lib.pen",
+    "W": "pencil:nitro.lib.pen"
+  }
+}

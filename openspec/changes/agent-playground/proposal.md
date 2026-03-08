@@ -99,11 +99,12 @@
 
 ```typescript
 interface SessionBarProps {
-  sessions: AgentSessionMeta[];
+  sessions: AgentSession[];              // 复用 types/agent.ts 的 AgentSession 类型
   currentSessionId: string | null;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
+  onOpenHistory: () => void;
 }
 ```
 
@@ -113,7 +114,7 @@ Session 列表显示：
 - 最后活跃时间（相对时间，如 "3h ago"）
 - 删除按钮（带确认对话框）
 
-排序：按 `last_active_at` 降序
+排序：按 `updated_at` 降序
 
 #### Session 与原生 CLI Session 的映射
 

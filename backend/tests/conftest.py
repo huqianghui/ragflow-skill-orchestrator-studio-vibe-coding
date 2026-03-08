@@ -34,3 +34,10 @@ async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest.fixture(autouse=True, scope="session")
+async def dispose_engine():
+    """Dispose the async engine after all tests to prevent process hang on exit."""
+    yield
+    await engine.dispose()

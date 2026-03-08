@@ -6,6 +6,7 @@ import {
   Card,
   Checkbox,
   Collapse,
+  Drawer,
   Form,
   Input,
   message,
@@ -23,6 +24,7 @@ import {
   CloudUploadOutlined,
   DeleteOutlined,
   FileOutlined,
+  RobotOutlined,
   SaveOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
@@ -32,6 +34,7 @@ import type { Connection, Skill, SkillTestResult } from '../types';
 import { connectionsApi, skillsApi } from '../services/api';
 import ConfigSchemaForm from '../components/ConfigSchemaForm';
 import PageHeader from '../components/PageHeader';
+import AgentChatWidget from '../components/agent/AgentChatWidget';
 
 const { Text, Paragraph } = Typography;
 
@@ -75,6 +78,7 @@ export default function BuiltinSkillEditor() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadedContentType, setUploadedContentType] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -239,6 +243,9 @@ export default function BuiltinSkillEditor() {
             onBack={() => navigate('/skills')}
             extra={
               <Space>
+                <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+                  Agent
+                </Button>
                 <Tooltip title="Configuration">
                   <Button
                     icon={<SettingOutlined />}
@@ -789,6 +796,29 @@ export default function BuiltinSkillEditor() {
             )}
           </div>
         </div>
+
+        <Drawer
+          title="Agent Assistant"
+          placement="right"
+          width={400}
+          mask={false}
+          open={agentDrawerOpen}
+          onClose={() => setAgentDrawerOpen(false)}
+        >
+          <AgentChatWidget
+            embedded
+            autoContext={{
+              type: 'skill',
+              data: {
+                name: skill.name,
+                description: skill.description,
+                config_schema: skill.config_schema,
+                config_values: form.getFieldsValue(),
+              },
+            }}
+            onApplyConfig={(config) => form.setFieldsValue(config)}
+          />
+        </Drawer>
       </div>
     );
   }
@@ -801,9 +831,14 @@ export default function BuiltinSkillEditor() {
           title={<>{skill.name} <Tag color="blue">Built-in</Tag></>}
           onBack={() => navigate('/skills')}
           extra={
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-              Save
-            </Button>
+            <Space>
+              <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+                Agent
+              </Button>
+              <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                Save
+              </Button>
+            </Space>
           }
         />
       </div>
@@ -1016,6 +1051,29 @@ export default function BuiltinSkillEditor() {
           )}
         </div>
       </div>
+
+      <Drawer
+        title="Agent Assistant"
+        placement="right"
+        width={400}
+        mask={false}
+        open={agentDrawerOpen}
+        onClose={() => setAgentDrawerOpen(false)}
+      >
+        <AgentChatWidget
+          embedded
+          autoContext={{
+            type: 'skill',
+            data: {
+              name: skill.name,
+              description: skill.description,
+              config_schema: skill.config_schema,
+              config_values: form.getFieldsValue(),
+            },
+          }}
+          onApplyConfig={(config) => form.setFieldsValue(config)}
+        />
+      </Drawer>
     </div>
   );
 }

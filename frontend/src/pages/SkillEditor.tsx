@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Collapse,
+  Drawer,
   Input,
   message,
   Select,
@@ -17,12 +18,14 @@ import {
   CaretRightOutlined,
   DeleteOutlined,
   PlusOutlined,
+  RobotOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
 import Editor from '@monaco-editor/react';
 import type { Connection, PreloadedImports, SkillTestResult } from '../types';
 import { connectionsApi, skillsApi } from '../services/api';
 import PageHeader from '../components/PageHeader';
+import AgentChatWidget from '../components/agent/AgentChatWidget';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -65,6 +68,7 @@ export default function SkillEditor() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
 
   // Skill fields
   const [name, setName] = useState('');
@@ -267,9 +271,14 @@ export default function SkillEditor() {
           navigate('/skills');
         }}
         extra={
-          <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-            Save
-          </Button>
+          <Space>
+            <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+              Agent
+            </Button>
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+              Save
+            </Button>
+          </Space>
         }
       />
 
@@ -504,6 +513,24 @@ export default function SkillEditor() {
           )}
         </div>
       </div>
+
+      <Drawer
+        title="Agent Assistant"
+        placement="right"
+        width={400}
+        mask={false}
+        open={agentDrawerOpen}
+        onClose={() => setAgentDrawerOpen(false)}
+      >
+        <AgentChatWidget
+          embedded
+          autoContext={{
+            type: 'skill',
+            data: { name, description, source_code: sourceCode },
+          }}
+          onApplyCode={(code) => { setSourceCode(code); setDirty(true); }}
+        />
+      </Drawer>
     </div>
   );
 }

@@ -16,6 +16,8 @@ import TargetNew from './pages/TargetNew';
 import Targets from './pages/Targets';
 import RunHistory from './pages/RunHistory';
 import Settings from './pages/Settings';
+import AgentPlayground from './pages/AgentPlayground';
+import AgentHistory from './pages/AgentHistory';
 
 export default function App() {
   const { themeKey } = useThemeStore();
@@ -39,6 +41,8 @@ export default function App() {
             <Route path="/targets/new" element={<TargetNew />} />
             <Route path="/targets" element={<Targets />} />
             <Route path="/runs" element={<RunHistory />} />
+            <Route path="/playground" element={<AgentPlayground />} />
+            <Route path="/playground/history" element={<AgentHistory />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>

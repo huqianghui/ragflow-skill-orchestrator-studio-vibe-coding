@@ -1,0 +1,93 @@
+"""SessionProxy — thin proxy layer for agent session metadata."""
+
+import math
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.agent_session import AgentSession
+
+
+class SessionProxy:
+    """Manages session metadata only — message history is owned by CLI agents."""
+
+    async def create(
+        self,
+        db: AsyncSession,
+        agent_name: str,
+        source: str,
+        mode: str,
+    ) -> AgentSession:
+        session = AgentSession(
+            agent_name=agent_name,
+            source=source,
+            mode=mode,
+            title="New Session",
+        )
+        db.add(session)
+        await db.commit()
+        await db.refresh(session)
+        return session
+
+    async def get(self, db: AsyncSession, session_id: str) -> AgentSession | None:
+        result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+        return result.scalar_one_or_none()
+
+    async def list_sessions(
+        self,
+        db: AsyncSession,
+        source: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        """Return paginated sessions in standard PaginatedResponse format."""
+        query = select(AgentSession)
+        count_query = select(func.count()).select_from(AgentSession)
+        if source:
+            query = query.where(AgentSession.source == source)
+            count_query = count_query.where(AgentSession.source == source)
+        query = query.order_by(AgentSession.updated_at.desc())
+
+        # Get total count
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Apply pagination
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+        result = await db.execute(query)
+        items = list(result.scalars().all())
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": math.ceil(total / page_size) if page_size > 0 else 0,
+        }
+
+    async def update_native_id(self, db: AsyncSession, session_id: str, native_id: str) -> None:
+        """Store native session id mapping after first conversation."""
+        result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+        session = result.scalar_one()
+        session.native_session_id = native_id
+        await db.commit()
+
+    async def update_title(self, db: AsyncSession, session_id: str, title: str) -> None:
+        result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+        session = result.scalar_one()
+        session.title = title[:255]
+        await db.commit()
+
+    async def delete(self, db: AsyncSession, session_id: str) -> bool:
+        """Delete a session. Returns True if found and deleted."""
+        result = await db.execute(select(AgentSession).where(AgentSession.id == session_id))
+        session = result.scalar_one_or_none()
+        if session:
+            await db.delete(session)
+            await db.commit()
+            return True
+        return False
+
+
+session_proxy = SessionProxy()

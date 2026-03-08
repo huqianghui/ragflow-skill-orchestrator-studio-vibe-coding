@@ -89,12 +89,14 @@ class VenvManager:
                     str(env_path),
                 ],
                 check=True,
+                timeout=60,
             )
 
         pip = self._pip_path(env_path)
         subprocess.run(
             [pip, "install", "--quiet"] + reqs,
             check=True,
+            timeout=120,
         )
         logger.info("Skill venv ready with additional packages: %s", reqs)
         return env_path

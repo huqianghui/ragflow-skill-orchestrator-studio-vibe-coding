@@ -13,6 +13,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from alembic import command
 from app.models import Base
+from app.models.agent_session import AgentSession
 from app.models.connection import Connection
 from app.models.skill import Skill
 
@@ -45,6 +46,20 @@ async def test_connections_table_has_all_model_columns(client):
     expected = _get_model_columns(Connection)
     async with engine.connect() as conn:
         result = await conn.execute(text("PRAGMA table_info(connections)"))
+        actual = {row[1] for row in result.fetchall()}
+    missing = expected - actual
+    extra = actual - expected
+    assert expected == actual, f"Schema mismatch. Missing: {missing}, Extra: {extra}"
+
+
+@pytest.mark.asyncio
+async def test_agent_sessions_table_has_all_model_columns(client):
+    """Verify the agent_sessions table schema includes all columns."""
+    from tests.conftest import engine
+
+    expected = _get_model_columns(AgentSession)
+    async with engine.connect() as conn:
+        result = await conn.execute(text("PRAGMA table_info(agent_sessions)"))
         actual = {row[1] for row in result.fetchall()}
     missing = expected - actual
     extra = actual - expected
@@ -105,6 +120,16 @@ def test_alembic_migration_matches_models():
             missing = expected_conn_cols - conn_cols
             assert not missing, (
                 f"Alembic migration missing connection columns: {missing}. "
+                "Update the migration file."
+            )
+
+            # Check agent_sessions table
+            result = conn.execute(text("PRAGMA table_info(agent_sessions)"))
+            agent_cols = {row[1] for row in result.fetchall()}
+            expected_agent_cols = _get_model_columns(AgentSession)
+            missing = expected_agent_cols - agent_cols
+            assert not missing, (
+                f"Alembic migration missing agent_session columns: {missing}. "
                 "Update the migration file."
             )
 

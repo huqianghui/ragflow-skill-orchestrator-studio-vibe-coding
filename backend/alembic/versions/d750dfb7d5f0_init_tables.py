@@ -193,9 +193,33 @@ def upgrade() -> None:
     with op.batch_alter_table("runs", schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_runs_pipeline_id"), ["pipeline_id"], unique=False)
 
+    op.create_table(
+        "agent_sessions",
+        sa.Column("agent_name", sa.String(length=50), nullable=False),
+        sa.Column("native_session_id", sa.String(length=255), nullable=True),
+        sa.Column("title", sa.String(length=255), nullable=False, server_default="New Session"),
+        sa.Column("mode", sa.String(length=20), nullable=False, server_default="code"),
+        sa.Column("source", sa.String(length=50), nullable=False, server_default="playground"),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_table("agent_sessions")
     with op.batch_alter_table("runs", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_runs_pipeline_id"))
     op.drop_table("runs")

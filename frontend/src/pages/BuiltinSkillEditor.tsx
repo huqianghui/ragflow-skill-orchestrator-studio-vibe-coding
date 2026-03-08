@@ -6,7 +6,6 @@ import {
   Card,
   Checkbox,
   Collapse,
-  Drawer,
   Form,
   Input,
   message,
@@ -15,6 +14,7 @@ import {
   Spin,
   Tabs,
   Tag,
+  theme,
   Tooltip,
   Typography,
 } from 'antd';
@@ -24,6 +24,8 @@ import {
   CloudUploadOutlined,
   DeleteOutlined,
   FileOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   RobotOutlined,
   SaveOutlined,
   SettingOutlined,
@@ -78,7 +80,10 @@ export default function BuiltinSkillEditor() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadedContentType, setUploadedContentType] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [activePanels, setActivePanels] = useState<string | string[]>(['test']);
+  const [showAgent, setShowAgent] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { token } = theme.useToken();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -243,7 +248,15 @@ export default function BuiltinSkillEditor() {
             onBack={() => navigate('/skills')}
             extra={
               <Space>
-                <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+                <Button
+                  icon={<RobotOutlined />}
+                  onClick={() => {
+                  setShowAgent(prev => {
+                    if (!prev) setSidebarCollapsed(false);
+                    return !prev;
+                  });
+                }}
+                >
                   Agent
                 </Button>
                 <Tooltip title="Configuration">
@@ -477,11 +490,64 @@ export default function BuiltinSkillEditor() {
             </div>
           </div>
 
-          {/* Right column: output panel */}
+          {/* Right column: collapsible, output / agent mutually exclusive */}
           <div style={{
-            width: 480, flexShrink: 0, display: 'flex', flexDirection: 'column',
-            paddingLeft: 8, overflow: 'hidden',
+            width: sidebarCollapsed ? 40 : 480,
+            minWidth: sidebarCollapsed ? 40 : 480,
+            flexShrink: 0, display: 'flex', flexDirection: 'column',
+            borderLeft: `1px solid ${token.colorBorderSecondary}`,
+            background: token.colorBgLayout,
+            overflow: 'hidden',
+            transition: 'width 0.2s, min-width 0.2s',
           }}>
+            {/* Collapse toggle */}
+            <div
+              onClick={() => setSidebarCollapsed(prev => !prev)}
+              style={{
+                padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgContainer,
+                color: token.colorTextSecondary, fontSize: 14,
+              }}
+            >
+              {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </div>
+
+            {!sidebarCollapsed && (showAgent ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <Collapse
+                  size="small"
+                  activeKey={['agent']}
+                  onChange={(keys) => {
+                    const arr = Array.isArray(keys) ? keys : keys ? [keys] : [];
+                    if (!arr.includes('agent')) setShowAgent(false);
+                  }}
+                  destroyOnHidden={false}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                  items={[{
+                    key: 'agent',
+                    label: 'Agent Assistant',
+                    children: (
+                      <div style={{ height: 'calc(100vh - 260px)' }}>
+                        <AgentChatWidget
+                          embedded
+                          autoContext={{
+                            type: 'skill',
+                            data: {
+                              name: skill.name,
+                              description: skill.description,
+                              config_schema: skill.config_schema,
+                              config_values: form.getFieldsValue(),
+                            },
+                          }}
+                          onApplyConfig={(config) => form.setFieldsValue(config)}
+                        />
+                      </div>
+                    ),
+                  }]}
+                />
+              </div>
+            ) : (<>
             {testing && (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <Spin size="large" />
@@ -794,31 +860,9 @@ export default function BuiltinSkillEditor() {
                 </Text>
               </div>
             )}
+            </>))}
           </div>
         </div>
-
-        <Drawer
-          title="Agent Assistant"
-          placement="right"
-          width={400}
-          mask={false}
-          open={agentDrawerOpen}
-          onClose={() => setAgentDrawerOpen(false)}
-        >
-          <AgentChatWidget
-            embedded
-            autoContext={{
-              type: 'skill',
-              data: {
-                name: skill.name,
-                description: skill.description,
-                config_schema: skill.config_schema,
-                config_values: form.getFieldsValue(),
-              },
-            }}
-            onApplyConfig={(config) => form.setFieldsValue(config)}
-          />
-        </Drawer>
       </div>
     );
   }
@@ -832,7 +876,15 @@ export default function BuiltinSkillEditor() {
           onBack={() => navigate('/skills')}
           extra={
             <Space>
-              <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+              <Button
+                icon={<RobotOutlined />}
+                onClick={() => {
+                  setShowAgent(prev => {
+                    if (!prev) setSidebarCollapsed(false);
+                    return !prev;
+                  });
+                }}
+              >
                 Agent
               </Button>
               <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
@@ -895,185 +947,229 @@ export default function BuiltinSkillEditor() {
           )}
         </div>
 
-        {/* Right panel: Test */}
-        <div style={{ width: 440, flexShrink: 0, overflow: 'auto' }}>
-          <Card size="small" title="Test Input" style={{ marginBottom: 12 }}>
-            {!isFileOnly && (
-              <Input.TextArea
-                rows={4}
-                placeholder="Enter test text here..."
-                value={testInputText}
-                onChange={(e) => {
-                  setTestInputText(e.target.value);
-                  setUploadedFileId(null);
-                  setUploadedFileName(null);
+        {/* Right panel: collapsible, Test / Agent mutually exclusive */}
+        <div style={{
+          width: sidebarCollapsed ? 40 : 440,
+          minWidth: sidebarCollapsed ? 40 : 440,
+          flexShrink: 0,
+          borderLeft: `1px solid ${token.colorBorderSecondary}`,
+          background: token.colorBgLayout,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'width 0.2s, min-width 0.2s',
+        }}>
+          {/* Collapse toggle */}
+          <div
+            onClick={() => setSidebarCollapsed(prev => !prev)}
+            style={{
+              padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+              borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary, fontSize: 14,
+            }}
+          >
+            {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </div>
+
+          {!sidebarCollapsed && (showAgent ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <Collapse
+                size="small"
+                activeKey={['agent']}
+                onChange={(keys) => {
+                  const arr = Array.isArray(keys) ? keys : keys ? [keys] : [];
+                  if (!arr.includes('agent')) setShowAgent(false);
                 }}
-                style={{ marginBottom: 8 }}
-              />
-            )}
-
-            <div style={{
-              border: '1px dashed #d9d9d9',
-              borderRadius: 6,
-              padding: uploadedFileName ? '8px 12px' : '24px 12px',
-              textAlign: 'center',
-              marginBottom: 12,
-              background: uploadedFileName ? '#f6ffed' : '#fafafa',
-            }}>
-              {uploadedFileName ? (
-                <Space>
-                  <Tag color="blue" style={{ margin: 0 }}>{uploadedFileName}</Tag>
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={handleRemoveFile}
-                  />
-                </Space>
-              ) : (
-                <>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                      e.target.value = '';
-                    }}
-                  />
-                  <Button
-                    icon={<CloudUploadOutlined />}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Upload File
-                  </Button>
-                  {isFileOnly && (
-                    <div style={{ marginTop: 4 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        Upload a document to test (PDF, DOCX, etc.)
-                      </Text>
+                destroyOnHidden={false}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                items={[{
+                  key: 'agent',
+                  label: 'Agent Assistant',
+                  children: (
+                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                      <AgentChatWidget
+                        embedded
+                        autoContext={{
+                          type: 'skill',
+                          data: {
+                            name: skill.name,
+                            description: skill.description,
+                            config_schema: skill.config_schema,
+                            config_values: form.getFieldsValue(),
+                          },
+                        }}
+                        onApplyConfig={(config) => form.setFieldsValue(config)}
+                      />
                     </div>
-                  )}
-                </>
-              )}
+                  ),
+                }]}
+              />
             </div>
+          ) : (
+          <Collapse
+            size="small"
+            activeKey={activePanels}
+            onChange={(key) => setActivePanels(key)}
+            destroyOnHidden={false}
+            items={[
+              {
+                key: 'test',
+                label: (
+                  <Space>
+                    Test Input & Output
+                    {testResult && (
+                      testResult.error ? (
+                        <Tag color="red">Timeout</Tag>
+                      ) : hasErrors ? (
+                        <Tag color="red">Errors</Tag>
+                      ) : (
+                        <Tag color="green">Success</Tag>
+                      )
+                    )}
+                  </Space>
+                ),
+                children: (
+                  <>
+                    {!isFileOnly && (
+                      <Input.TextArea
+                        rows={4}
+                        placeholder="Enter test text here..."
+                        value={testInputText}
+                        onChange={(e) => {
+                          setTestInputText(e.target.value);
+                          setUploadedFileId(null);
+                          setUploadedFileName(null);
+                        }}
+                        style={{ marginBottom: 8 }}
+                      />
+                    )}
 
-            <Button
-              type="primary"
-              icon={<CaretRightOutlined />}
-              loading={testing}
-              onClick={handleTest}
-              block
-              disabled={!canRunTest}
-            >
-              Run Test
-            </Button>
-          </Card>
-
-          {testResult && (
-            <Card
-              size="small"
-              title={
-                <Space>
-                  Output
-                  {testResult.error ? (
-                    <Tag color="red">Timeout</Tag>
-                  ) : hasErrors ? (
-                    <Tag color="red">Errors</Tag>
-                  ) : (
-                    <Tag color="green">Success</Tag>
-                  )}
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {testResult.execution_time_ms}ms
-                  </Text>
-                </Space>
-              }
-            >
-              {testResult.error && (
-                <Alert type="error" message={testResult.error} style={{ marginBottom: 8 }} />
-              )}
-
-              {testResult.values.map((v, i) => (
-                <div key={i} style={{ marginBottom: 8 }}>
-                  <Text strong>Record: {v.recordId}</Text>
-                  {v.errors.length > 0 && (
-                    <Alert
-                      type="error"
-                      message={v.errors.map((e) => e.message).join('; ')}
-                      description={v.errors[0]?.traceback && (
-                        <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', margin: 0 }}>
-                          {v.errors[0].traceback}
-                        </pre>
-                      )}
-                      style={{ marginTop: 4 }}
-                    />
-                  )}
-                  {v.errors.length === 0 && (
-                    <pre style={{
-                      margin: '4px 0', padding: 8,
-                      background: '#f6ffed', border: '1px solid #b7eb8f',
-                      borderRadius: 4, fontSize: 12, maxHeight: 400, overflow: 'auto',
-                      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                    <div style={{
+                      border: '1px dashed #d9d9d9',
+                      borderRadius: 6,
+                      padding: uploadedFileName ? '8px 12px' : '24px 12px',
+                      textAlign: 'center',
+                      marginBottom: 12,
+                      background: uploadedFileName ? '#f6ffed' : '#fafafa',
                     }}>
-                      {JSON.stringify(v.data, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              ))}
+                      {uploadedFileName ? (
+                        <Space>
+                          <Tag color="blue" style={{ margin: 0 }}>{uploadedFileName}</Tag>
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={handleRemoveFile}
+                          />
+                        </Space>
+                      ) : (
+                        <>
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file);
+                              e.target.value = '';
+                            }}
+                          />
+                          <Button
+                            icon={<CloudUploadOutlined />}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            Upload File
+                          </Button>
+                          {isFileOnly && (
+                            <div style={{ marginTop: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                Upload a document to test (PDF, DOCX, etc.)
+                              </Text>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-              {testResult.logs.length > 0 && (
-                <Collapse
-                  size="small"
-                  items={[{
-                    key: 'logs',
-                    label: `Logs (${testResult.logs.length})`,
-                    children: (
-                      <div style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
-                        {testResult.logs.map((log, i) => (
-                          <div key={i} style={{ marginBottom: 2 }}>
-                            <Tag
-                              color={log.level === 'ERROR' ? 'red' : log.level === 'WARNING' ? 'orange' : 'blue'}
-                              style={{ fontSize: 10 }}
-                            >
-                              {log.level}
-                            </Tag>
-                            <Text>{log.message}</Text>
+                    <Button
+                      type="primary"
+                      icon={<CaretRightOutlined />}
+                      loading={testing}
+                      onClick={handleTest}
+                      block
+                      disabled={!canRunTest}
+                    >
+                      Run Test
+                    </Button>
+
+                    {testResult && (
+                      <div style={{ marginTop: 12 }}>
+                        {testResult.error && (
+                          <Alert type="error" message={testResult.error} style={{ marginBottom: 8 }} />
+                        )}
+                        {testResult.values.map((v, i) => (
+                          <div key={i} style={{ marginBottom: 8 }}>
+                            <Text strong>Record: {v.recordId}</Text>
+                            {v.errors.length > 0 && (
+                              <Alert
+                                type="error"
+                                message={v.errors.map((e) => e.message).join('; ')}
+                                description={v.errors[0]?.traceback && (
+                                  <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', margin: 0 }}>
+                                    {v.errors[0].traceback}
+                                  </pre>
+                                )}
+                                style={{ marginTop: 4 }}
+                              />
+                            )}
+                            {v.errors.length === 0 && (
+                              <pre style={{
+                                margin: '4px 0', padding: 8,
+                                background: '#f6ffed', border: '1px solid #b7eb8f',
+                                borderRadius: 4, fontSize: 12, maxHeight: 400, overflow: 'auto',
+                                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                              }}>
+                                {JSON.stringify(v.data, null, 2)}
+                              </pre>
+                            )}
                           </div>
                         ))}
+                        {testResult.logs.length > 0 && (
+                          <Collapse
+                            size="small"
+                            items={[{
+                              key: 'logs',
+                              label: `Logs (${testResult.logs.length})`,
+                              children: (
+                                <div style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+                                  {testResult.logs.map((log, li) => (
+                                    <div key={li} style={{ marginBottom: 2 }}>
+                                      <Tag
+                                        color={log.level === 'ERROR' ? 'red' : log.level === 'WARNING' ? 'orange' : 'blue'}
+                                        style={{ fontSize: 10 }}
+                                      >
+                                        {log.level}
+                                      </Tag>
+                                      <Text>{log.message}</Text>
+                                    </div>
+                                  ))}
+                                </div>
+                              ),
+                            }]}
+                          />
+                        )}
                       </div>
-                    ),
-                  }]}
-                />
-              )}
-            </Card>
-          )}
+                    )}
+                  </>
+                ),
+              },
+            ]}
+          />
+          ))}
         </div>
       </div>
-
-      <Drawer
-        title="Agent Assistant"
-        placement="right"
-        width={400}
-        mask={false}
-        open={agentDrawerOpen}
-        onClose={() => setAgentDrawerOpen(false)}
-      >
-        <AgentChatWidget
-          embedded
-          autoContext={{
-            type: 'skill',
-            data: {
-              name: skill.name,
-              description: skill.description,
-              config_schema: skill.config_schema,
-              config_values: form.getFieldsValue(),
-            },
-          }}
-          onApplyConfig={(config) => form.setFieldsValue(config)}
-        />
-      </Drawer>
     </div>
   );
 }

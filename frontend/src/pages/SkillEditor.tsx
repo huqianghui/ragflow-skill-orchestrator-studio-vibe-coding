@@ -5,18 +5,20 @@ import {
   Button,
   Card,
   Collapse,
-  Drawer,
   Input,
   message,
   Select,
   Space,
   Spin,
   Tag,
+  theme,
   Typography,
 } from 'antd';
 import {
   CaretRightOutlined,
   DeleteOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   PlusOutlined,
   RobotOutlined,
   SaveOutlined,
@@ -68,7 +70,10 @@ export default function SkillEditor() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [showAgent, setShowAgent] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [configPanels, setConfigPanels] = useState<string | string[]>(['connections', 'requirements', 'test']);
+  const { token } = theme.useToken();
 
   // Skill fields
   const [name, setName] = useState('');
@@ -263,28 +268,38 @@ export default function SkillEditor() {
   const hasErrors = testResult?.values.some(v => v.errors.length > 0);
 
   return (
-    <div>
-      <PageHeader
-        title={isNew ? 'New Python Skill' : `Edit: ${name}`}
-        onBack={() => {
-          if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
-          navigate('/skills');
-        }}
-        extra={
-          <Space>
-            <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
-              Agent
-            </Button>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
-              Save
-            </Button>
-          </Space>
-        }
-      />
+    <div style={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flexShrink: 0 }}>
+        <PageHeader
+          title={isNew ? 'New Python Skill' : `Edit: ${name}`}
+          onBack={() => {
+            if (dirty && !window.confirm('You have unsaved changes. Leave without saving?')) return;
+            navigate('/skills');
+          }}
+          extra={
+            <Space>
+              <Button
+                icon={<RobotOutlined />}
+                onClick={() => {
+                  setShowAgent(prev => {
+                    if (!prev) setSidebarCollapsed(false);
+                    return !prev;
+                  });
+                }}
+              >
+                Agent
+              </Button>
+              <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+                Save
+              </Button>
+            </Space>
+          }
+        />
+      </div>
 
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Left panel: Code Editor */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
           <Card size="small" title="Skill Info" style={{ marginBottom: 12 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Input
@@ -345,192 +360,240 @@ export default function SkillEditor() {
           </Card>
         </div>
 
-        {/* Right panel */}
-        <div style={{ width: 400, flexShrink: 0 }}>
-          {/* Connection Mappings */}
-          <Card size="small" title="Connection Mappings" style={{ marginBottom: 12 }}>
-            {connectionMappings.map((m, i) => (
-              <Space key={i} style={{ display: 'flex', marginBottom: 8 }} align="start">
-                <Input
-                  placeholder="Name (e.g. llm)"
-                  value={m.name}
-                  onChange={(e) => updateConnectionMapping(i, 'name', e.target.value)}
-                  style={{ width: 120 }}
-                />
-                <Select
-                  placeholder="Select connection"
-                  value={m.connectionId || undefined}
-                  onChange={(v) => updateConnectionMapping(i, 'connectionId', v)}
-                  style={{ width: 200 }}
-                  options={connections.map((c) => ({
-                    label: `${c.name} (${c.connection_type})`,
-                    value: c.id,
-                  }))}
-                />
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => removeConnectionMapping(i)}
-                />
-              </Space>
-            ))}
-            <Button type="dashed" block icon={<PlusOutlined />} onClick={addConnectionMapping}>
-              Add Connection
-            </Button>
-          </Card>
+        {/* Right panel — collapsible, Config / Agent mutually exclusive */}
+        <div style={{
+          width: sidebarCollapsed ? 40 : 400,
+          minWidth: sidebarCollapsed ? 40 : 400,
+          flexShrink: 0,
+          borderLeft: `1px solid ${token.colorBorderSecondary}`,
+          background: token.colorBgLayout,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'width 0.2s, min-width 0.2s',
+        }}>
+          {/* Collapse toggle */}
+          <div
+            onClick={() => setSidebarCollapsed(prev => !prev)}
+            style={{
+              padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+              borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary, fontSize: 14,
+            }}
+          >
+            {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </div>
 
-          {/* Additional Requirements */}
-          <Card size="small" title="Additional Requirements" style={{ marginBottom: 12 }}>
-            <TextArea
-              rows={3}
-              placeholder="One pip package per line, e.g.&#10;beautifulsoup4==4.12.0&#10;lxml"
-              value={additionalRequirements}
-              onChange={(e) => { setAdditionalRequirements(e.target.value); setDirty(true); }}
-            />
-          </Card>
-
-          {/* Test Input */}
-          <Card size="small" title="Test Input (JSON)" style={{ marginBottom: 12 }}>
-            <Editor
-              height="200px"
-              language="json"
-              theme="vs-light"
-              value={testInputStr}
-              onChange={(v) => { setTestInputStr(v || ''); setDirty(true); }}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 12,
-                lineNumbers: 'off',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                wordWrap: 'on',
-              }}
-            />
-            <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
-              <Button
-                disabled
-                block
-                title="Available after Pipeline execution engine is implemented (Phase 2)"
-              >
-                Import from Pipeline Test Run
-              </Button>
-              <Button
-                type="primary"
-                icon={<CaretRightOutlined />}
-                loading={testing}
-                onClick={handleTest}
-                block
-              >
-                Run Test
-              </Button>
-            </Space>
-          </Card>
-
-          {/* Test Output */}
-          {testResult && (
-            <Card
+          {!sidebarCollapsed && (showAgent ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <Collapse
+                size="small"
+                activeKey={['agent']}
+                onChange={(keys) => {
+                  const arr = Array.isArray(keys) ? keys : keys ? [keys] : [];
+                  if (!arr.includes('agent')) setShowAgent(false);
+                }}
+                destroyOnHidden={false}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                items={[{
+                  key: 'agent',
+                  label: 'Agent Assistant',
+                  children: (
+                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                      <AgentChatWidget
+                        embedded
+                        autoContext={{
+                          type: 'skill',
+                          data: { name, description, source_code: sourceCode },
+                        }}
+                        onApplyCode={(code) => { setSourceCode(code); setDirty(true); }}
+                      />
+                    </div>
+                  ),
+                }]}
+              />
+            </div>
+          ) : (
+            <Collapse
               size="small"
-              title={
-                <Space>
-                  Output
-                  {testResult.error ? (
-                    <Tag color="red">Timeout</Tag>
-                  ) : hasErrors ? (
-                    <Tag color="red">Errors</Tag>
-                  ) : (
-                    <Tag color="green">Success</Tag>
-                  )}
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {testResult.execution_time_ms}ms
-                  </Text>
-                </Space>
-              }
-            >
-              {testResult.error && (
-                <Alert type="error" message={testResult.error} style={{ marginBottom: 8 }} />
-              )}
-
-              {testResult.values.map((v, i) => (
-                <div key={i} style={{ marginBottom: 8 }}>
-                  <Text strong>Record: {v.recordId}</Text>
-                  {v.errors.length > 0 && (
-                    <Alert
-                      type="error"
-                      message={v.errors.map((e) => e.message).join('; ')}
-                      description={v.errors[0]?.traceback && (
-                        <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', margin: 0 }}>
-                          {v.errors[0].traceback}
-                        </pre>
-                      )}
-                      style={{ marginTop: 4 }}
+              activeKey={configPanels}
+              onChange={(key) => setConfigPanels(key)}
+              destroyOnHidden={false}
+              items={[
+                {
+                  key: 'connections',
+                  label: 'Connection Mappings',
+                  children: (
+                    <>
+                      {connectionMappings.map((m, i) => (
+                        <Space key={i} style={{ display: 'flex', marginBottom: 8 }} align="start">
+                          <Input
+                            placeholder="Name (e.g. llm)"
+                            value={m.name}
+                            onChange={(e) => updateConnectionMapping(i, 'name', e.target.value)}
+                            style={{ width: 120 }}
+                          />
+                          <Select
+                            placeholder="Select connection"
+                            value={m.connectionId || undefined}
+                            onChange={(v) => updateConnectionMapping(i, 'connectionId', v)}
+                            style={{ width: 200 }}
+                            options={connections.map((c) => ({
+                              label: `${c.name} (${c.connection_type})`,
+                              value: c.id,
+                            }))}
+                          />
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => removeConnectionMapping(i)}
+                          />
+                        </Space>
+                      ))}
+                      <Button type="dashed" block icon={<PlusOutlined />} onClick={addConnectionMapping}>
+                        Add Connection
+                      </Button>
+                    </>
+                  ),
+                },
+                {
+                  key: 'requirements',
+                  label: 'Additional Requirements',
+                  children: (
+                    <TextArea
+                      rows={3}
+                      placeholder="One pip package per line, e.g.&#10;beautifulsoup4==4.12.0&#10;lxml"
+                      value={additionalRequirements}
+                      onChange={(e) => { setAdditionalRequirements(e.target.value); setDirty(true); }}
                     />
-                  )}
-                  {v.errors.length === 0 && (
-                    <pre style={{
-                      margin: '4px 0',
-                      padding: 8,
-                      background: '#f6ffed',
-                      border: '1px solid #b7eb8f',
-                      borderRadius: 4,
-                      fontSize: 12,
-                      maxHeight: 200,
-                      overflow: 'auto',
-                    }}>
-                      {JSON.stringify(v.data, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              ))}
+                  ),
+                },
+                {
+                  key: 'test',
+                  label: (
+                    <Space>
+                      Test Input & Output
+                      {testResult && (
+                        testResult.error ? (
+                          <Tag color="red">Timeout</Tag>
+                        ) : hasErrors ? (
+                          <Tag color="red">Errors</Tag>
+                        ) : (
+                          <Tag color="green">Success</Tag>
+                        )
+                      )}
+                    </Space>
+                  ),
+                  children: (
+                    <>
+                      <Editor
+                        height="200px"
+                        language="json"
+                        theme="vs-light"
+                        value={testInputStr}
+                        onChange={(v) => { setTestInputStr(v || ''); setDirty(true); }}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 12,
+                          lineNumbers: 'off',
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          wordWrap: 'on',
+                        }}
+                      />
+                      <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+                        <Button
+                          disabled
+                          block
+                          title="Available after Pipeline execution engine is implemented (Phase 2)"
+                        >
+                          Import from Pipeline Test Run
+                        </Button>
+                        <Button
+                          type="primary"
+                          icon={<CaretRightOutlined />}
+                          loading={testing}
+                          onClick={handleTest}
+                          block
+                        >
+                          Run Test
+                        </Button>
+                      </Space>
 
-              {testResult.logs.length > 0 && (
-                <Collapse
-                  size="small"
-                  items={[
-                    {
-                      key: 'logs',
-                      label: `Logs (${testResult.logs.length})`,
-                      children: (
-                        <div style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
-                          {testResult.logs.map((log, i) => (
-                            <div key={i} style={{ marginBottom: 2 }}>
-                              <Tag
-                                color={log.level === 'ERROR' ? 'red' : log.level === 'WARNING' ? 'orange' : 'blue'}
-                                style={{ fontSize: 10 }}
-                              >
-                                {log.level}
-                              </Tag>
-                              <Text>{log.message}</Text>
+                      {testResult && (
+                        <div style={{ marginTop: 12 }}>
+                          {testResult.error && (
+                            <Alert type="error" message={testResult.error} style={{ marginBottom: 8 }} />
+                          )}
+                          {testResult.values.map((v, i) => (
+                            <div key={i} style={{ marginBottom: 8 }}>
+                              <Text strong>Record: {v.recordId}</Text>
+                              {v.errors.length > 0 && (
+                                <Alert
+                                  type="error"
+                                  message={v.errors.map((e) => e.message).join('; ')}
+                                  description={v.errors[0]?.traceback && (
+                                    <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', margin: 0 }}>
+                                      {v.errors[0].traceback}
+                                    </pre>
+                                  )}
+                                  style={{ marginTop: 4 }}
+                                />
+                              )}
+                              {v.errors.length === 0 && (
+                                <pre style={{
+                                  margin: '4px 0',
+                                  padding: 8,
+                                  background: '#f6ffed',
+                                  border: '1px solid #b7eb8f',
+                                  borderRadius: 4,
+                                  fontSize: 12,
+                                  maxHeight: 200,
+                                  overflow: 'auto',
+                                }}>
+                                  {JSON.stringify(v.data, null, 2)}
+                                </pre>
+                              )}
                             </div>
                           ))}
+                          {testResult.logs.length > 0 && (
+                            <Collapse
+                              size="small"
+                              items={[
+                                {
+                                  key: 'logs',
+                                  label: `Logs (${testResult.logs.length})`,
+                                  children: (
+                                    <div style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+                                      {testResult.logs.map((log, li) => (
+                                        <div key={li} style={{ marginBottom: 2 }}>
+                                          <Tag
+                                            color={log.level === 'ERROR' ? 'red' : log.level === 'WARNING' ? 'orange' : 'blue'}
+                                            style={{ fontSize: 10 }}
+                                          >
+                                            {log.level}
+                                          </Tag>
+                                          <Text>{log.message}</Text>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ),
+                                },
+                              ]}
+                            />
+                          )}
                         </div>
-                      ),
-                    },
-                  ]}
-                />
-              )}
-            </Card>
-          )}
+                      )}
+                    </>
+                  ),
+                },
+              ]}
+            />
+          ))}
         </div>
       </div>
-
-      <Drawer
-        title="Agent Assistant"
-        placement="right"
-        width={400}
-        mask={false}
-        open={agentDrawerOpen}
-        onClose={() => setAgentDrawerOpen(false)}
-      >
-        <AgentChatWidget
-          embedded
-          autoContext={{
-            type: 'skill',
-            data: { name, description, source_code: sourceCode },
-          }}
-          onApplyCode={(code) => { setSourceCode(code); setDirty(true); }}
-        />
-      </Drawer>
     </div>
   );
 }

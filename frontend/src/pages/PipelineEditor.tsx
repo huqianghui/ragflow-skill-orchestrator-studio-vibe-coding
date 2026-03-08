@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Button, Card, Drawer, Empty, Input, Modal, Select, Space, Spin,
+  Button, Card, Collapse, Empty, Input, Modal, Select, Space, Spin,
   Tag, Tooltip, Typography, Upload, message, theme,
 } from 'antd';
 import {
@@ -395,7 +395,7 @@ export default function PipelineEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
+  const [showAgent, setShowAgent] = useState(false);
 
   // Debug state
   const [debugFile, setDebugFile] = useState<File | null>(null);
@@ -551,11 +551,39 @@ export default function PipelineEditor() {
   // Render
   // ====================================================================
 
+  const handlePipelineAction = useCallback((action: PipelineAction) => {
+    if (action.action === 'add_node') {
+      setNodes(prev => {
+        const newNode: PipelineNode = {
+          id: `node_${Date.now()}`,
+          skill_name: action.skill_name,
+          label: action.skill_name,
+          position: action.position ?? prev.length,
+          context: '',
+          inputs: [],
+          outputs: [],
+          config_overrides: action.config_overrides || {},
+        };
+        return [...prev, newNode];
+      });
+      message.success('Node added');
+    } else if (action.action === 'update_node') {
+      updateNode(action.node_id, action.changes);
+      message.success('Node updated');
+    } else if (action.action === 'remove_node') {
+      removeNode(action.node_id);
+      message.success('Node removed');
+    } else if (action.action === 'update_config') {
+      updateNode(action.node_id, { config_overrides: action.config_overrides });
+      message.success('Config updated');
+    }
+  }, [updateNode, removeNode, setNodes]);
+
   if (loading) return <Spin style={{ display: 'block', margin: '100px auto' }} size="large" />;
   if (!pipeline) return <Empty description="Pipeline not found" />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 112px)' }}>
       {/* Top bar */}
       <div style={{
         padding: '8px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
@@ -581,7 +609,10 @@ export default function PipelineEditor() {
               </Button>
             </>
           )}
-          <Button icon={<RobotOutlined />} onClick={() => setAgentDrawerOpen(true)}>
+          <Button
+            icon={<RobotOutlined />}
+            onClick={() => setShowAgent(prev => !prev)}
+          >
             Agent
           </Button>
           <Button
@@ -605,32 +636,42 @@ export default function PipelineEditor() {
       </div>
 
       {/* Content */}
-      {mode === 'edit' ? (
-        <ReactFlowProvider>
-          <EditMode
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {mode === 'edit' ? (
+          <ReactFlowProvider>
+            <EditMode
+              nodes={nodes}
+              skills={skills}
+              availablePaths={availablePaths}
+              selectedNodeId={selectedNodeId}
+              setSelectedNodeId={setSelectedNodeId}
+              updateNode={updateNode}
+              removeNode={removeNode}
+              setNodes={setNodes}
+              showAgent={showAgent}
+              onToggleAgent={() => setShowAgent(prev => !prev)}
+              pipelineName={pipeline.name}
+              onApplyPipelineAction={handlePipelineAction}
+            />
+          </ReactFlowProvider>
+        ) : (
+          <DebugMode
             nodes={nodes}
-            skills={skills}
-            availablePaths={availablePaths}
+            debugFile={debugFile}
+            setDebugFile={setDebugFile}
+            debugRunning={debugRunning}
+            debugResult={debugResult}
             selectedNodeId={selectedNodeId}
             setSelectedNodeId={setSelectedNodeId}
-            updateNode={updateNode}
-            removeNode={removeNode}
-            setNodes={setNodes}
+            selectedNodeResult={selectedNodeResult}
+            runDebug={runDebug}
+            showAgent={showAgent}
+            onToggleAgent={() => setShowAgent(prev => !prev)}
+            pipelineName={pipeline.name}
+            onApplyPipelineAction={handlePipelineAction}
           />
-        </ReactFlowProvider>
-      ) : (
-        <DebugMode
-          nodes={nodes}
-          debugFile={debugFile}
-          setDebugFile={setDebugFile}
-          debugRunning={debugRunning}
-          debugResult={debugResult}
-          selectedNodeId={selectedNodeId}
-          setSelectedNodeId={setSelectedNodeId}
-          selectedNodeResult={selectedNodeResult}
-          runDebug={runDebug}
-        />
-      )}
+        )}
+      </div>
 
       {/* JSON Editor Modal */}
       <JsonEditorModal
@@ -639,51 +680,6 @@ export default function PipelineEditor() {
         onApply={handleJsonApply}
         onCancel={() => setJsonModalOpen(false)}
       />
-
-      <Drawer
-        title="Agent Assistant"
-        placement="right"
-        width={400}
-        mask={false}
-        open={agentDrawerOpen}
-        onClose={() => setAgentDrawerOpen(false)}
-      >
-        <AgentChatWidget
-          embedded
-          autoContext={{
-            type: 'pipeline',
-            data: { nodes, name: pipeline.name },
-            selectedNode: selectedNodeId ?? undefined,
-          }}
-          onApplyPipelineAction={(action: PipelineAction) => {
-            if (action.action === 'add_node') {
-              setNodes(prev => {
-                const newNode: PipelineNode = {
-                  id: `node_${Date.now()}`,
-                  skill_name: action.skill_name,
-                  label: action.skill_name,
-                  position: action.position ?? prev.length,
-                  context: '',
-                  inputs: [],
-                  outputs: [],
-                  config_overrides: action.config_overrides || {},
-                };
-                return [...prev, newNode];
-              });
-              message.success('Node added');
-            } else if (action.action === 'update_node') {
-              updateNode(action.node_id, action.changes);
-              message.success('Node updated');
-            } else if (action.action === 'remove_node') {
-              removeNode(action.node_id);
-              message.success('Node removed');
-            } else if (action.action === 'update_config') {
-              updateNode(action.node_id, { config_overrides: action.config_overrides });
-              message.success('Config updated');
-            }
-          }}
-        />
-      </Drawer>
     </div>
   );
 }
@@ -695,6 +691,7 @@ export default function PipelineEditor() {
 function EditMode({
   nodes, skills, availablePaths, selectedNodeId, setSelectedNodeId,
   updateNode, removeNode, setNodes,
+  showAgent, onToggleAgent, pipelineName, onApplyPipelineAction,
 }: {
   nodes: PipelineNode[];
   skills: Skill[];
@@ -704,11 +701,20 @@ function EditMode({
   updateNode: (id: string, patch: Partial<PipelineNode>) => void;
   removeNode: (id: string) => void;
   setNodes: React.Dispatch<React.SetStateAction<PipelineNode[]>>;
+  showAgent?: boolean;
+  onToggleAgent?: () => void;
+  pipelineName: string;
+  onApplyPipelineAction: (action: PipelineAction) => void;
 }) {
   const { token: editToken } = theme.useToken();
   const [sidebarTab, setSidebarTab] = useState<'skills' | 'config'>('skills');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const reactFlowInstance = useReactFlow();
+
+  // Auto-expand sidebar when Agent is toggled on
+  useEffect(() => {
+    if (showAgent) setSidebarCollapsed(false);
+  }, [showAgent]);
 
   const initialFlowNodes = useMemo(
     () => pipelineNodesToFlowNodes(nodes, skills),
@@ -906,6 +912,7 @@ function EditMode({
 
   const handlePaneClick = useCallback(() => {
     setSelectedNodeId(null);
+    setSidebarTab('skills');
   }, [setSelectedNodeId]);
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId) ?? null;
@@ -966,67 +973,99 @@ function EditMode({
         </div>
 
         {!sidebarCollapsed && (
-          <>
-            {/* Tab bar */}
-            <div style={{
-              display: 'flex', borderBottom: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgContainer,
-            }}>
-              <div
-                onClick={() => setSidebarTab('skills')}
-                style={{
-                  flex: 1, padding: '10px 0', textAlign: 'center', cursor: 'pointer',
-                  fontWeight: sidebarTab === 'skills' ? 600 : 400,
-                  color: sidebarTab === 'skills' ? editToken.colorPrimary : editToken.colorTextSecondary,
-                  borderBottom: sidebarTab === 'skills'
-                    ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
-                  fontSize: 13,
+          showAgent ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              <Collapse
+                size="small"
+                activeKey={['agent']}
+                onChange={(keys) => {
+                  const arr = Array.isArray(keys) ? keys : keys ? [keys] : [];
+                  if (!arr.includes('agent')) onToggleAgent?.();
                 }}
-              >
-                <PlusOutlined style={{ marginRight: 6 }} />Add Skill
-              </div>
-              <div
-                onClick={() => { if (selectedNode) setSidebarTab('config'); }}
-                style={{
-                  flex: 1, padding: '10px 0', textAlign: 'center',
-                  cursor: selectedNode ? 'pointer' : 'not-allowed',
-                  fontWeight: sidebarTab === 'config' ? 600 : 400,
-                  color: sidebarTab === 'config'
-                    ? editToken.colorPrimary : selectedNode ? editToken.colorTextSecondary : editToken.colorTextQuaternary,
-                  borderBottom: sidebarTab === 'config'
-                    ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
-                  fontSize: 13,
-                }}
-              >
-                <EditOutlined style={{ marginRight: 6 }} />
-                {selectedNode
-                  ? (selectedNode.label || selectedNode.skill_name)
-                  : 'Node Config'}
-              </div>
+                destroyOnHidden={false}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+                items={[{
+                  key: 'agent',
+                  label: 'Agent Assistant',
+                  children: (
+                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                      <AgentChatWidget
+                        embedded
+                        autoContext={{
+                          type: 'pipeline',
+                          data: { nodes, name: pipelineName },
+                          selectedNode: selectedNodeId ?? undefined,
+                        }}
+                        onApplyPipelineAction={onApplyPipelineAction}
+                      />
+                    </div>
+                  ),
+                }]}
+              />
             </div>
-
-            {/* Tab content */}
-            <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-              {sidebarTab === 'skills' ? (
-                <AddSkillPanel skills={skills} />
-              ) : selectedNode ? (
-                <ConfigPanel
-                  node={selectedNode}
-                  skill={selectedSkill}
-                  availablePaths={availablePaths}
-                  onUpdate={(patch) => updateNode(selectedNode.id, patch)}
-                  onDelete={() => {
-                    removeNode(selectedNode.id);
-                    setSidebarTab('skills');
+          ) : (
+            <>
+              {/* Tab bar */}
+              <div style={{
+                display: 'flex', borderBottom: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgContainer,
+              }}>
+                <div
+                  onClick={() => setSidebarTab('skills')}
+                  style={{
+                    flex: 1, padding: '10px 0', textAlign: 'center', cursor: 'pointer',
+                    fontWeight: sidebarTab === 'skills' ? 600 : 400,
+                    color: sidebarTab === 'skills' ? editToken.colorPrimary : editToken.colorTextSecondary,
+                    borderBottom: sidebarTab === 'skills'
+                      ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
+                    fontSize: 13,
                   }}
-                />
-              ) : (
-                <Empty
-                  description="Select a node on the canvas"
-                  style={{ marginTop: 60 }}
-                />
-              )}
-            </div>
-          </>
+                >
+                  <PlusOutlined style={{ marginRight: 6 }} />Add Skill
+                </div>
+                <div
+                  onClick={() => { if (selectedNode) setSidebarTab('config'); }}
+                  style={{
+                    flex: 1, padding: '10px 0', textAlign: 'center',
+                    cursor: selectedNode ? 'pointer' : 'not-allowed',
+                    fontWeight: sidebarTab === 'config' ? 600 : 400,
+                    color: sidebarTab === 'config'
+                      ? editToken.colorPrimary : selectedNode ? editToken.colorTextSecondary : editToken.colorTextQuaternary,
+                    borderBottom: sidebarTab === 'config'
+                      ? `2px solid ${editToken.colorPrimary}` : '2px solid transparent',
+                    fontSize: 13,
+                  }}
+                >
+                  <EditOutlined style={{ marginRight: 6 }} />
+                  {selectedNode
+                    ? (selectedNode.label || selectedNode.skill_name)
+                    : 'Node Config'}
+                </div>
+              </div>
+
+              {/* Tab content */}
+              <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+                {sidebarTab === 'skills' ? (
+                  <AddSkillPanel skills={skills} />
+                ) : selectedNode ? (
+                  <ConfigPanel
+                    node={selectedNode}
+                    skill={selectedSkill}
+                    availablePaths={availablePaths}
+                    onUpdate={(patch) => updateNode(selectedNode.id, patch)}
+                    onDelete={() => {
+                      removeNode(selectedNode.id);
+                      setSidebarTab('skills');
+                    }}
+                  />
+                ) : (
+                  <Empty
+                    description="Select a node on the canvas"
+                    style={{ marginTop: 60 }}
+                  />
+                )}
+              </div>
+            </>
+          )
         )}
       </div>
     </div>
@@ -1325,6 +1364,7 @@ function AddSkillPanel({ skills }: { skills: Skill[] }) {
 function DebugMode({
   nodes, debugFile, setDebugFile, debugRunning, debugResult,
   selectedNodeId, setSelectedNodeId, selectedNodeResult, runDebug,
+  showAgent, onToggleAgent, pipelineName, onApplyPipelineAction,
 }: {
   nodes: PipelineNode[];
   debugFile: File | null;
@@ -1335,7 +1375,19 @@ function DebugMode({
   setSelectedNodeId: (id: string | null) => void;
   selectedNodeResult: NodeExecutionResult | null;
   runDebug: () => void;
+  showAgent?: boolean;
+  onToggleAgent?: () => void;
+  pipelineName: string;
+  onApplyPipelineAction: (action: PipelineAction) => void;
 }) {
+  const { token: debugToken } = theme.useToken();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Auto-expand sidebar when Agent is toggled on
+  useEffect(() => {
+    if (showAgent) setSidebarCollapsed(false);
+  }, [showAgent]);
+
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       {/* Left column — file upload + status list */}
@@ -1438,15 +1490,68 @@ function DebugMode({
         )}
       </div>
 
-      {/* Right column — node detail */}
+      {/* Right column — collapsible, node detail / agent mutually exclusive */}
       <div style={{
-        width: 400, borderLeft: '1px solid #f0f0f0', padding: 12, overflow: 'auto',
+        width: sidebarCollapsed ? 40 : 400,
+        minWidth: sidebarCollapsed ? 40 : 400,
+        borderLeft: `1px solid ${debugToken.colorBorderSecondary}`,
+        background: debugToken.colorBgLayout,
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+        transition: 'width 0.2s, min-width 0.2s',
       }}>
-        {selectedNodeResult ? (
-          <NodeDetail result={selectedNodeResult} />
+        {/* Collapse toggle */}
+        <div
+          onClick={() => setSidebarCollapsed(prev => !prev)}
+          style={{
+            padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+            borderBottom: `1px solid ${debugToken.colorBorderSecondary}`,
+            background: debugToken.colorBgContainer,
+            color: debugToken.colorTextSecondary, fontSize: 14,
+          }}
+        >
+          {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+        </div>
+
+        {!sidebarCollapsed && (showAgent ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Collapse
+              size="small"
+              activeKey={['agent']}
+              onChange={(keys) => {
+                const arr = Array.isArray(keys) ? keys : keys ? [keys] : [];
+                if (!arr.includes('agent')) onToggleAgent?.();
+              }}
+              destroyOnHidden={false}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+              items={[{
+                key: 'agent',
+                label: 'Agent Assistant',
+                children: (
+                  <div style={{ height: 'calc(100vh - 260px)' }}>
+                    <AgentChatWidget
+                      embedded
+                      autoContext={{
+                        type: 'pipeline',
+                        data: { nodes, name: pipelineName },
+                        selectedNode: selectedNodeId ?? undefined,
+                      }}
+                      onApplyPipelineAction={onApplyPipelineAction}
+                    />
+                  </div>
+                ),
+              }]}
+            />
+          </div>
         ) : (
-          <Empty description="Click a node to see details" style={{ marginTop: 80 }} />
-        )}
+          <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+            {selectedNodeResult ? (
+              <NodeDetail result={selectedNodeResult} />
+            ) : (
+              <Empty description="Click a node to see details" style={{ marginTop: 80 }} />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

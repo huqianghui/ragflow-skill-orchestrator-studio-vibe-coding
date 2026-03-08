@@ -4,7 +4,7 @@ const STORAGE_KEY = 'app-theme';
 
 function loadThemeKey(): string {
   try {
-    return localStorage.getItem(STORAGE_KEY) || 'light';
+    return localStorage.getItem(STORAGE_KEY) || 'sky-blue';
   } catch {
     return 'light';
   }

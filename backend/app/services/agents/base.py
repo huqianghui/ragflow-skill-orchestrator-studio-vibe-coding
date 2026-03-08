@@ -83,17 +83,52 @@ class BaseAgentAdapter(ABC):
         """Return CLI version string, or None if unavailable."""
 
     async def get_info(self) -> AgentInfo:
-        """Return complete agent info with availability and version."""
-        available = await self.is_available()
-        version = await self.get_version() if available else None
-        tools = await self.get_tools() if available else self.default_tools
-        mcp_servers = await self.get_mcp_servers() if available else []
-        # get_config may update self.model / self.provider dynamically
-        if available:
+        """Return complete agent info with availability and version.
+
+        Runs all probes (availability, version, tools, MCP, config) in
+        parallel to minimize wall-clock time.  Probes that depend on
+        availability gracefully return defaults when the agent is missing.
+        """
+
+        async def _safe_version() -> str | None:
+            try:
+                return await self.get_version()
+            except Exception:
+                return None
+
+        async def _safe_tools() -> list[str]:
+            try:
+                return await self.get_tools()
+            except Exception:
+                return self.default_tools
+
+        async def _safe_mcp() -> list[str]:
+            try:
+                return await self.get_mcp_servers()
+            except Exception:
+                return []
+
+        async def _safe_config() -> None:
             try:
                 await self.get_config()
             except Exception:
                 pass
+
+        # Run all probes concurrently
+        available, version, tools, mcp_servers, _ = await asyncio.gather(
+            self.is_available(),
+            _safe_version(),
+            _safe_tools(),
+            _safe_mcp(),
+            _safe_config(),
+        )
+
+        # Discard results from probes that only matter when available
+        if not available:
+            version = None
+            tools = self.default_tools
+            mcp_servers = []
+
         return AgentInfo(
             name=self.name,
             display_name=self.display_name,

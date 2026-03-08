@@ -5,7 +5,6 @@ import type {
   AgentInfo, Attachment, AgentContextData, ChatMessage, PipelineAction,
 } from '../../types/agent';
 import { agentApi, AgentWebSocket } from '../../services/agentApi';
-import AgentSelector from './AgentSelector';
 import AgentDetailPanel from './AgentDetailPanel';
 import ModeBar from './ModeBar';
 import ContextPanel from './ContextPanel';
@@ -53,7 +52,8 @@ export default function AgentChatWidget({
   const selectedAgent = externalAgentName ?? internalAgent;
   const selectedMode = externalAgentMode ?? internalMode;
   const currentAgentInfo = agents.find(a => a.name === selectedAgent);
-  const modes = currentAgentInfo?.modes ?? [];
+  const allModes = currentAgentInfo?.modes ?? [];
+  const modes = embedded ? allModes.filter(m => m !== 'plan') : allModes;
 
   const handleModeChange = (mode: string) => {
     if (externalOnModeChange) externalOnModeChange(mode);
@@ -305,24 +305,15 @@ export default function AgentChatWidget({
         minWidth: 0,
         minHeight: 0,
       }}>
-        {/* Embedded mode: compact selector */}
-        {embedded && (
-          <AgentSelector
-            agents={agents}
-            selectedAgent={selectedAgent}
+
+        {/* Mode bar (hidden when only one mode available) */}
+        {modes.length > 1 && (
+          <ModeBar
+            modes={modes}
             selectedMode={selectedMode}
-            onAgentChange={setInternalAgent}
-            onModeChange={setInternalMode}
-            compact
+            onModeChange={handleModeChange}
           />
         )}
-
-        {/* Mode bar */}
-        <ModeBar
-          modes={modes}
-          selectedMode={selectedMode}
-          onModeChange={handleModeChange}
-        />
 
         {/* Context panel */}
         <ContextPanel
@@ -395,8 +386,8 @@ export default function AgentChatWidget({
         </div>
       </div>
 
-      {/* Right sidebar: Agent Info & Tools */}
-      <AgentDetailPanel agent={currentAgentInfo} />
+      {/* Right sidebar: Agent Info & Tools (Playground only) */}
+      {!embedded && <AgentDetailPanel agent={currentAgentInfo} />}
     </div>
   );
 }

@@ -56,9 +56,58 @@ jobs:
       - name: Build
         run: npm run build
 
-  deploy:
+  e2e-test:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -e ".[dev]"
+        working-directory: backend
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Start backend
+        run: uvicorn app.main:app --port 18000 &
+        working-directory: backend
+
+      - name: Wait for backend ready
+        run: |
+          timeout 30 bash -c 'until curl -sf http://localhost:18000/api/v1/health > /dev/null 2>&1; do sleep 1; done'
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        working-directory: frontend
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, e2e-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       id-token: write

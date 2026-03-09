@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Spin, Tag, Typography, theme } from 'antd';
 import {
@@ -32,22 +32,16 @@ interface CardDef {
   bg: string;
 }
 
+/* Card order matches sidebar menu grouping:
+   Orchestration → Resources → Runs → Agents */
 const CARDS: CardDef[] = [
   {
-    key: 'skills',
-    title: 'Skill Library',
-    path: '/skills',
-    icon: <ExperimentOutlined />,
-    color: '#1677ff',
-    bg: '#e6f4ff',
-  },
-  {
-    key: 'connections',
-    title: 'Connections',
-    path: '/connections',
-    icon: <ApiOutlined />,
-    color: '#52c41a',
-    bg: '#f6ffed',
+    key: 'workflows',
+    title: 'Workflows',
+    path: '/workflows',
+    icon: <BranchesOutlined />,
+    color: '#2f54eb',
+    bg: '#f0f5ff',
   },
   {
     key: 'pipelines',
@@ -56,6 +50,14 @@ const CARDS: CardDef[] = [
     icon: <NodeIndexOutlined />,
     color: '#722ed1',
     bg: '#f9f0ff',
+  },
+  {
+    key: 'skills',
+    title: 'Skills',
+    path: '/skills',
+    icon: <ExperimentOutlined />,
+    color: '#1677ff',
+    bg: '#e6f4ff',
   },
   {
     key: 'datasources',
@@ -74,12 +76,12 @@ const CARDS: CardDef[] = [
     bg: '#e6fffb',
   },
   {
-    key: 'workflows',
-    title: 'Workflows',
-    path: '/workflows',
-    icon: <BranchesOutlined />,
-    color: '#2f54eb',
-    bg: '#f0f5ff',
+    key: 'connections',
+    title: 'Connections',
+    path: '/connections',
+    icon: <ApiOutlined />,
+    color: '#52c41a',
+    bg: '#f6ffed',
   },
   {
     key: 'workflow_runs',
@@ -90,9 +92,9 @@ const CARDS: CardDef[] = [
     bg: '#fff0f6',
   },
   {
-    key: 'runhistory',
-    title: 'Run History',
-    path: '/runs',
+    key: 'pipeline_runs',
+    title: 'Pipeline Runs',
+    path: '/pipeline-runs',
     icon: <HistoryOutlined />,
     color: '#faad14',
     bg: '#fffbe6',
@@ -168,6 +170,16 @@ export default function Dashboard() {
   const [layouts, setLayouts] = useState<Layouts>(
     () => loadLayouts() || makeDefaultLayouts(),
   );
+  const isDragging = useRef(false);
+
+  const handleDragHandleMouseDown = useCallback(() => {
+    isDragging.current = true;
+    const onUp = () => {
+      setTimeout(() => { isDragging.current = false; }, 100);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mouseup', onUp);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -206,7 +218,7 @@ export default function Dashboard() {
       targets: stats.counts.targets,
       workflows: stats.counts.workflows,
       workflow_runs: stats.counts.workflow_runs,
-      runhistory: stats.counts.runs,
+      pipeline_runs: stats.counts.runs,
       agents: stats.counts.agents,
     };
     return countMap[key] ?? '-';
@@ -272,7 +284,7 @@ export default function Dashboard() {
             <div key={card.key}>
               <Card
                 hoverable
-                onClick={() => navigate(card.path)}
+                onClick={() => { if (!isDragging.current) navigate(card.path); }}
                 style={{
                   height: '100%',
                   cursor: 'pointer',
@@ -307,6 +319,7 @@ export default function Dashboard() {
                     opacity: 0,
                     transition: 'opacity 0.2s',
                   }}
+                  onMouseDown={handleDragHandleMouseDown}
                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
                 >

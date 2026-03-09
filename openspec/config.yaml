@@ -25,6 +25,7 @@ specs:
   - workflows/spec.md
   - executable-builtin-skills/spec.md
   - system/spec.md
+  - dashboard/spec.md
   # Frontend UI
   - skill-library-ui/spec.md
   - skill-editor-ui/spec.md

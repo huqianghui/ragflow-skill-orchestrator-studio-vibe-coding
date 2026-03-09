@@ -14,6 +14,7 @@ import type {
   PreloadedImports,
   Run,
   Skill,
+  UnifiedPipelineRun,
   SkillTestResult,
   Target,
   TargetSchemaDiscovery,
@@ -204,6 +205,14 @@ export const workflowRunsApi = {
     }).then(r => r.data),
   get: (id: string) =>
     apiClient.get<WorkflowRunDetail>(`/workflow-runs/${id}`).then(r => r.data),
+};
+
+// --- Pipeline Runs (unified) ---
+export const pipelineRunsApi = {
+  list: (page = 1, pageSize = 20, source?: string) =>
+    apiClient.get<PaginatedResponse<UnifiedPipelineRun>>('/pipeline-runs', {
+      params: { page, page_size: pageSize, ...(source ? { source } : {}) },
+    }).then(r => r.data),
 };
 
 // --- Dashboard ---

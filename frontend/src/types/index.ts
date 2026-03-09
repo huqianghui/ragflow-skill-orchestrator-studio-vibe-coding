@@ -344,6 +344,24 @@ export interface ErrorResponse {
   details: Record<string, unknown> | null;
 }
 
+// === Unified Pipeline Run ===
+
+export interface UnifiedPipelineRun {
+  id: string;
+  pipeline_id: string;
+  pipeline_name: string | null;
+  status: string;
+  source: 'standalone' | 'workflow';
+  total_files: number;
+  processed_files: number;
+  failed_files: number;
+  workflow_run_id: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
 // === Dashboard Stats ===
 
 export interface DashboardResourceCounts {

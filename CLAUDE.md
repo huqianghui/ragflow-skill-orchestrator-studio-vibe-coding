@@ -58,16 +58,19 @@ openspec/
 backend/
   app/
     api/           # FastAPI 路由: health, skills, connections, pipelines,
-                   #   runs, targets, data_sources, agents
-    models/        # SQLAlchemy ORM (10 模型): connection, skill, pipeline, run,
-                   #   data_source, target, agent_session, agent_config, agent_message
+                   #   runs, targets, data_sources, workflows, workflow_runs, agents
+    models/        # SQLAlchemy ORM (13 模型): connection, skill, pipeline, run,
+                   #   data_source, target, workflow, workflow_run, pipeline_run,
+                   #   processed_file, agent_session, agent_config, agent_message
     schemas/       # Pydantic 请求/响应 schema:
-                   #   skill, connection, pipeline, run, data_source, target, agent, common
+                   #   skill, connection, pipeline, run, data_source, target,
+                   #   workflow, workflow_run, agent, common
     services/      # 业务逻辑层
                    #   skill_runner, venv_manager, skill_seeder, skill_context
                    #   upload_manager, temp_file_manager
-                   #   data_source_tester, target_tester, target_writer
+                   #   data_source_tester, data_source_reader, target_tester, target_writer
                    #   target_index_manager, target_schema_discovery, mapping_engine
+                   #   workflow_executor (路由匹配 + 增量处理 + 执行编排)
                    #   builtin_skills/ (base, runner, 7 类内置 Skill 实现)
                    #   pipeline/ (enrichment_tree, runner)
                    #   agents/ (base, registry, session_proxy, context_builder,
@@ -78,15 +81,16 @@ backend/
     database.py    # 异步引擎 & session 工厂
     main.py        # FastAPI app, lifespan, 路由注册, 后台刷新任务
   alembic/         # 数据库迁移脚本
-  tests/           # pytest 测试 (27 个测试文件)
+  tests/           # pytest 测试 (29 个测试文件)
   data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
 frontend/
   src/
-    pages/         # 15 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
+    pages/         # 17 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
                    #   BuiltinSkillEditor, Connections, Pipelines, PipelineEditor,
                    #   DataSources, DataSourceNew, Targets, TargetNew,
+                   #   Workflows, WorkflowRunHistory,
                    #   RunHistory, Settings, AgentPlayground, AgentHistory)
     components/    # 可复用 UI 组件:
                    #   AppLayout, PageHeader, ListToolbar, TableUtils,

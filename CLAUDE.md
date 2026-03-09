@@ -81,7 +81,7 @@ backend/
     database.py    # 异步引擎 & session 工厂
     main.py        # FastAPI app, lifespan, 路由注册, 后台刷新任务
   alembic/         # 数据库迁移脚本
-  tests/           # pytest 测试 (29 个测试文件)
+  tests/           # pytest 测试 (31 个测试文件)
   data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
@@ -102,13 +102,13 @@ frontend/
     stores/        # Zustand 状态管理: themeStore.ts
     utils/         # 工具函数: time.ts (UTC 时间处理)
     types/         # TypeScript 类型定义: index.ts, agent.ts
-  e2e/             # Playwright E2E 测试 (5 个 spec 文件):
+  e2e/             # Playwright E2E 测试 (7 个 spec 文件):
                    #   agent-playground, agent-history-table, agent-session-restore,
-                   #   agent-chat-ui, editor-layout
+                   #   agent-chat-ui, editor-layout, workflows, workflow-run-history
   public/
     icons/         # SVG 图标 (data-sources/, targets/)
 
-openspec/          # 产品规格 — 19 个 spec, 28 个已归档变更 (详见上方文档分层体系)
+openspec/          # 产品规格 — 20 个 spec, 33 个已归档变更 (详见上方文档分层体系)
 ```
 
 ---

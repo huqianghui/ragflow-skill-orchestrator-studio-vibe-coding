@@ -22,6 +22,7 @@ specs:
   - runs/spec.md
   - targets/spec.md
   - agents/spec.md
+  - workflows/spec.md
   - executable-builtin-skills/spec.md
   - system/spec.md
   # Frontend UI

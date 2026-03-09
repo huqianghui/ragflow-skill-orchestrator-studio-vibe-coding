@@ -106,6 +106,32 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_skills_name"), ["name"], unique=True)
 
     op.create_table(
+        "workflows",
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("data_source_ids", sa.JSON(), nullable=False),
+        sa.Column("routes", sa.JSON(), nullable=False),
+        sa.Column("default_route", sa.JSON(), nullable=True),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    with op.batch_alter_table("workflows", schema=None) as batch_op:
+        batch_op.create_index(batch_op.f("ix_workflows_name"), ["name"], unique=False)
+
+    op.create_table(
         "data_sources",
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
@@ -296,6 +322,9 @@ def downgrade() -> None:
     op.drop_table("runs")
     op.drop_table("targets")
     op.drop_table("data_sources")
+    with op.batch_alter_table("workflows", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_workflows_name"))
+    op.drop_table("workflows")
     with op.batch_alter_table("skills", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_skills_name"))
     op.drop_table("skills")

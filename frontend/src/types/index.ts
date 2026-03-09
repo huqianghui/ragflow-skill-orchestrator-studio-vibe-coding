@@ -256,6 +256,41 @@ export interface Run {
   updated_at: string;
 }
 
+// === Workflow ===
+
+export interface FileFilter {
+  extensions?: string[];
+  mime_types?: string[];
+  size_range?: { min_bytes?: number; max_bytes?: number };
+  path_pattern?: string;
+}
+
+export interface RouteRule {
+  name: string;
+  priority: number;
+  file_filter: FileFilter;
+  pipeline_id: string;
+  target_ids: string[];
+}
+
+export interface DefaultRoute {
+  name: string;
+  pipeline_id: string;
+  target_ids: string[];
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string | null;
+  status: 'draft' | 'active' | 'archived';
+  data_source_ids: string[];
+  routes: RouteRule[];
+  default_route: DefaultRoute | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // === API Response Types ===
 
 export interface PaginatedResponse<T> {

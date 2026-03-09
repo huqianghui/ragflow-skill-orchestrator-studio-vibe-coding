@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ApiOutlined,
+  BranchesOutlined,
   DashboardOutlined,
   DatabaseOutlined,
   ExperimentOutlined,
@@ -28,6 +29,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/pipelines', icon: <NodeIndexOutlined />, label: 'Pipelines' },
   { key: '/data-sources', icon: <DatabaseOutlined />, label: 'Data Sources' },
   { key: '/targets', icon: <SendOutlined />, label: 'Targets' },
+  { key: '/workflows', icon: <BranchesOutlined />, label: 'Workflows' },
   { key: '/runs', icon: <HistoryOutlined />, label: 'Run History' },
   { type: 'divider' },
   { key: '/playground', icon: <MessageOutlined />, label: 'Agent Playground' },

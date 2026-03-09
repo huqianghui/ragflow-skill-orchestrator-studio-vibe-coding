@@ -18,6 +18,7 @@ import type {
   TargetSchemaDiscovery,
   TargetTestResult,
   UploadQuotaInfo,
+  Workflow,
 } from '../types';
 
 const apiClient = axios.create({
@@ -174,6 +175,20 @@ export const runsApi = {
     apiClient.get<Run>(`/runs/${id}`).then(r => r.data),
   create: (data: Partial<Run>) =>
     apiClient.post<Run>('/runs', data).then(r => r.data),
+};
+
+// --- Workflows ---
+export const workflowsApi = {
+  list: (page = 1, pageSize = 20) =>
+    apiClient.get<PaginatedResponse<Workflow>>('/workflows', { params: { page, page_size: pageSize } }).then(r => r.data),
+  get: (id: string) =>
+    apiClient.get<Workflow>(`/workflows/${id}`).then(r => r.data),
+  create: (data: Partial<Workflow>) =>
+    apiClient.post<Workflow>('/workflows', data).then(r => r.data),
+  update: (id: string, data: Partial<Workflow>) =>
+    apiClient.put<Workflow>(`/workflows/${id}`, data).then(r => r.data),
+  delete: (id: string) =>
+    apiClient.delete(`/workflows/${id}`),
 };
 
 export default apiClient;

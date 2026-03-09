@@ -16,6 +16,7 @@ import TargetNew from './pages/TargetNew';
 import Targets from './pages/Targets';
 import RunHistory from './pages/RunHistory';
 import Settings from './pages/Settings';
+import Workflows from './pages/Workflows';
 import AgentPlayground from './pages/AgentPlayground';
 import AgentHistory from './pages/AgentHistory';
 
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/targets/new" element={<TargetNew />} />
             <Route path="/targets" element={<Targets />} />
+            <Route path="/workflows" element={<Workflows />} />
             <Route path="/runs" element={<RunHistory />} />
             <Route path="/playground" element={<AgentPlayground />} />
             <Route path="/playground/history" element={<AgentHistory />} />

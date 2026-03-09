@@ -8,6 +8,7 @@ from app.models.pipeline import Pipeline
 from app.models.run import Run
 from app.models.skill import Skill
 from app.models.target import Target
+from app.models.workflow import Workflow
 
 __all__ = [
     "AgentConfig",
@@ -21,4 +22,5 @@ __all__ = [
     "Run",
     "Skill",
     "Target",
+    "Workflow",
 ]

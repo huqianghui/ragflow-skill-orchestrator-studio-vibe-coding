@@ -36,3 +36,7 @@ backend/data/
 # Build
 *.egg
 .claude/
+
+# Playwright
+test-results/
+playwright-report/

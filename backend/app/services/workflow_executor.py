@@ -8,12 +8,13 @@ import logging
 import mimetypes
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.data_source import DataSource
 from app.models.pipeline import Pipeline
+from app.models.processed_file import ProcessedFile
 from app.models.workflow import Workflow
 from app.models.workflow_run import PipelineRun, WorkflowRun
 from app.services.data_source_reader import FileInfo, list_files, read_file
@@ -158,6 +159,29 @@ async def _execute_workflow_inner(
         except Exception as exc:
             logger.error("Failed to list files from DataSource %s: %s", ds_id, exc)
 
+    # Step 1b: Incremental filtering — skip files already processed with same etag
+    filtered_files: list[tuple[FileInfo, DataSource]] = []
+    skipped = 0
+    for file_info, ds in all_files:
+        result = await db.execute(
+            select(ProcessedFile).where(
+                and_(
+                    ProcessedFile.workflow_id == workflow.id,
+                    ProcessedFile.data_source_id == ds.id,
+                    ProcessedFile.file_path == file_info.path,
+                )
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing and existing.file_etag and existing.file_etag == file_info.etag:
+            skipped += 1
+            continue
+        filtered_files.append((file_info, ds))
+
+    if skipped:
+        logger.info("Skipped %d already-processed files (incremental)", skipped)
+
+    all_files = filtered_files
     wf_run.total_files = len(all_files)
     await db.commit()
 
@@ -230,6 +254,10 @@ async def _execute_workflow_inner(
 
                 if result["status"] in ("success", "partial"):
                     pr_processed += 1
+                    # Record processed file for incremental tracking
+                    await _upsert_processed_file(
+                        db, workflow.id, ds.id, file_info.path, file_info.etag
+                    )
                 else:
                     pr_failed += 1
             except Exception as exc:
@@ -257,3 +285,36 @@ async def _execute_workflow_inner(
     await db.commit()
     await db.refresh(wf_run)
     return wf_run
+
+
+async def _upsert_processed_file(
+    db: AsyncSession,
+    workflow_id: str,
+    data_source_id: str,
+    file_path: str,
+    file_etag: str | None,
+) -> None:
+    """Insert or update a processed file record for incremental tracking."""
+    result = await db.execute(
+        select(ProcessedFile).where(
+            and_(
+                ProcessedFile.workflow_id == workflow_id,
+                ProcessedFile.data_source_id == data_source_id,
+                ProcessedFile.file_path == file_path,
+            )
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        existing.file_etag = file_etag
+        existing.processed_at = datetime.now(UTC)
+    else:
+        pf = ProcessedFile(
+            workflow_id=workflow_id,
+            data_source_id=data_source_id,
+            file_path=file_path,
+            file_etag=file_etag,
+            processed_at=datetime.now(UTC),
+        )
+        db.add(pf)
+    await db.commit()

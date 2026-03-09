@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, ForeignKey, String, Text
+from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -17,4 +17,5 @@ class DataSource(BaseModel):
     status: Mapped[str] = mapped_column(String(20), default="active")  # active, inactive, error
     file_count: Mapped[int] = mapped_column(default=0)
     total_size: Mapped[int] = mapped_column(default=0)  # bytes
-    pipeline_id: Mapped[str | None] = mapped_column(ForeignKey("pipelines.id"), default=None)
+    # Deprecated: use Workflow routes instead. Column kept for data compatibility.
+    pipeline_id: Mapped[str | None] = mapped_column(String(), default=None)

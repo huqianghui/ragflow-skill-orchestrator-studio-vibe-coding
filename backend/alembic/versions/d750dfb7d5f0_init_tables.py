@@ -154,7 +154,6 @@ def upgrade() -> None:
             server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["pipeline_id"], ["pipelines.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -180,9 +179,44 @@ def upgrade() -> None:
             server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["pipeline_id"], ["pipelines.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
+
+    op.create_table(
+        "processed_files",
+        sa.Column("workflow_id", sa.String(), nullable=False),
+        sa.Column("data_source_id", sa.String(), nullable=False),
+        sa.Column("file_path", sa.String(), nullable=False),
+        sa.Column("file_etag", sa.String(), nullable=True),
+        sa.Column("processed_at", sa.DateTime(), nullable=True),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["workflow_id"], ["workflows.id"]),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workflow_id", "data_source_id", "file_path", name="uq_processed_file"
+        ),
+    )
+    with op.batch_alter_table("processed_files", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_processed_files_workflow_id"), ["workflow_id"], unique=False
+        )
+        batch_op.create_index(
+            batch_op.f("ix_processed_files_data_source_id"),
+            ["data_source_id"],
+            unique=False,
+        )
 
     op.create_table(
         "runs",
@@ -389,6 +423,10 @@ def downgrade() -> None:
     op.drop_table("runs")
     op.drop_table("targets")
     op.drop_table("data_sources")
+    with op.batch_alter_table("processed_files", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_processed_files_data_source_id"))
+        batch_op.drop_index(batch_op.f("ix_processed_files_workflow_id"))
+    op.drop_table("processed_files")
     with op.batch_alter_table("pipeline_runs", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_pipeline_runs_workflow_run_id"))
     op.drop_table("pipeline_runs")

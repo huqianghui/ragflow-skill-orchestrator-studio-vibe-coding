@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, ForeignKey, String, Text
+from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -14,4 +14,5 @@ class Target(BaseModel):
     connection_config: Mapped[dict] = mapped_column(JSON, default=dict)
     field_mappings: Mapped[dict] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(20), default="active")  # active, inactive, error
-    pipeline_id: Mapped[str | None] = mapped_column(ForeignKey("pipelines.id"), default=None)
+    # Deprecated: use Workflow routes instead. Column kept for data compatibility.
+    pipeline_id: Mapped[str | None] = mapped_column(String(), default=None)

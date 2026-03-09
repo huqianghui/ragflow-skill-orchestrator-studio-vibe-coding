@@ -10,6 +10,7 @@ import {
   MenuUnfoldOutlined,
   MessageOutlined,
   NodeIndexOutlined,
+  PlayCircleOutlined,
   SendOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
@@ -30,6 +31,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/data-sources', icon: <DatabaseOutlined />, label: 'Data Sources' },
   { key: '/targets', icon: <SendOutlined />, label: 'Targets' },
   { key: '/workflows', icon: <BranchesOutlined />, label: 'Workflows' },
+  { key: '/workflow-runs', icon: <PlayCircleOutlined />, label: 'Workflow Runs' },
   { key: '/runs', icon: <HistoryOutlined />, label: 'Run History' },
   { type: 'divider' },
   { key: '/playground', icon: <MessageOutlined />, label: 'Agent Playground' },

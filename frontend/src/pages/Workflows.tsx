@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -17,6 +18,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
+  HistoryOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -33,6 +35,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function Workflows() {
+  const navigate = useNavigate();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -278,7 +281,7 @@ export default function Workflows() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 220,
+      width: 300,
       render: (_: unknown, record: Workflow) => (
         <Space>
           <Button
@@ -289,6 +292,15 @@ export default function Workflows() {
             onClick={() => handleRun(record.id)}
           >
             Run
+          </Button>
+          <Button
+            size="small"
+            icon={<HistoryOutlined />}
+            onClick={() =>
+              navigate(`/workflow-runs?workflow_id=${record.id}`)
+            }
+          >
+            Runs
           </Button>
           <Button
             size="small"
@@ -342,7 +354,7 @@ export default function Workflows() {
               100 +
               colWidths.description +
               160 +
-              220,
+              300,
           }}
           pagination={{
             current: page,

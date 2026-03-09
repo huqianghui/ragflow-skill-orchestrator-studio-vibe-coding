@@ -19,6 +19,8 @@ import type {
   TargetTestResult,
   UploadQuotaInfo,
   Workflow,
+  WorkflowRun,
+  WorkflowRunDetail,
 } from '../types';
 
 const apiClient = axios.create({
@@ -189,6 +191,18 @@ export const workflowsApi = {
     apiClient.put<Workflow>(`/workflows/${id}`, data).then(r => r.data),
   delete: (id: string) =>
     apiClient.delete(`/workflows/${id}`),
+  run: (id: string) =>
+    apiClient.post<WorkflowRunDetail>(`/workflows/${id}/run`, {}, { timeout: 300000 }).then(r => r.data),
+};
+
+// --- Workflow Runs ---
+export const workflowRunsApi = {
+  list: (page = 1, pageSize = 20, workflowId?: string) =>
+    apiClient.get<PaginatedResponse<WorkflowRun>>('/workflow-runs', {
+      params: { page, page_size: pageSize, ...(workflowId ? { workflow_id: workflowId } : {}) },
+    }).then(r => r.data),
+  get: (id: string) =>
+    apiClient.get<WorkflowRunDetail>(`/workflow-runs/${id}`).then(r => r.data),
 };
 
 export default apiClient;

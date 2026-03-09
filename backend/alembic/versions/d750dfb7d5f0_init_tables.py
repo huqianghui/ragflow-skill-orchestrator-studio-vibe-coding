@@ -220,6 +220,73 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_runs_pipeline_id"), ["pipeline_id"], unique=False)
 
     op.create_table(
+        "workflow_runs",
+        sa.Column("workflow_id", sa.String(), nullable=False),
+        sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("total_files", sa.Integer(), nullable=False),
+        sa.Column("processed_files", sa.Integer(), nullable=False),
+        sa.Column("failed_files", sa.Integer(), nullable=False),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("started_at", sa.DateTime(), nullable=True),
+        sa.Column("finished_at", sa.DateTime(), nullable=True),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["workflow_id"], ["workflows.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    with op.batch_alter_table("workflow_runs", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_workflow_runs_workflow_id"), ["workflow_id"], unique=False
+        )
+
+    op.create_table(
+        "pipeline_runs",
+        sa.Column("workflow_run_id", sa.String(), nullable=False),
+        sa.Column("pipeline_id", sa.String(), nullable=False),
+        sa.Column("route_name", sa.String(length=255), nullable=False),
+        sa.Column("target_ids", sa.JSON(), nullable=False),
+        sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("total_files", sa.Integer(), nullable=False),
+        sa.Column("processed_files", sa.Integer(), nullable=False),
+        sa.Column("failed_files", sa.Integer(), nullable=False),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column("started_at", sa.DateTime(), nullable=True),
+        sa.Column("finished_at", sa.DateTime(), nullable=True),
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["workflow_run_id"], ["workflow_runs.id"]),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    with op.batch_alter_table("pipeline_runs", schema=None) as batch_op:
+        batch_op.create_index(
+            batch_op.f("ix_pipeline_runs_workflow_run_id"),
+            ["workflow_run_id"],
+            unique=False,
+        )
+
+    op.create_table(
         "agent_sessions",
         sa.Column("agent_name", sa.String(length=50), nullable=False),
         sa.Column("native_session_id", sa.String(length=255), nullable=True),
@@ -322,6 +389,12 @@ def downgrade() -> None:
     op.drop_table("runs")
     op.drop_table("targets")
     op.drop_table("data_sources")
+    with op.batch_alter_table("pipeline_runs", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_pipeline_runs_workflow_run_id"))
+    op.drop_table("pipeline_runs")
+    with op.batch_alter_table("workflow_runs", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_workflow_runs_workflow_id"))
+    op.drop_table("workflow_runs")
     with op.batch_alter_table("workflows", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_workflows_name"))
     op.drop_table("workflows")

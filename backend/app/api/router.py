@@ -8,6 +8,7 @@ from app.api import (
     runs,
     skills,
     targets,
+    workflow_runs,
     workflows,
 )
 
@@ -19,4 +20,5 @@ api_router.include_router(data_sources.router)
 api_router.include_router(targets.router)
 api_router.include_router(runs.router)
 api_router.include_router(workflows.router)
+api_router.include_router(workflow_runs.router)
 api_router.include_router(agents.router)

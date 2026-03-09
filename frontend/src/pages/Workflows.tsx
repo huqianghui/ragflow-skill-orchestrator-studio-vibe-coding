@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Descriptions,
   Form,
   Input,
   message,
@@ -12,9 +13,14 @@ import {
   Table,
   Tag,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Workflow, Pipeline, DataSource, Target, RouteRule } from '../types';
+import type { Workflow, Pipeline, DataSource, Target, RouteRule, WorkflowRunDetail } from '../types';
 import { workflowsApi, pipelinesApi, dataSourcesApi, targetsApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 import PageHeader from '../components/PageHeader';
@@ -42,6 +48,11 @@ export default function Workflows() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [targets, setTargets] = useState<Target[]>([]);
+
+  // Run state
+  const [runningId, setRunningId] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<WorkflowRunDetail | null>(null);
+  const [runModalOpen, setRunModalOpen] = useState(false);
 
   // Search
   const [searchText, setSearchText] = useState('');
@@ -100,6 +111,24 @@ export default function Workflows() {
       fetchWorkflows(page, pageSize);
     } catch {
       message.error('Failed to delete workflow');
+    }
+  };
+
+  const handleRun = async (id: string) => {
+    setRunningId(id);
+    try {
+      const result = await workflowsApi.run(id);
+      setRunResult(result);
+      setRunModalOpen(true);
+      if (result.status === 'completed') {
+        message.success(`Workflow completed: ${result.processed_files} files processed`);
+      } else if (result.status === 'failed') {
+        message.error(`Workflow failed: ${result.error_message || 'Unknown error'}`);
+      }
+    } catch {
+      message.error('Failed to run workflow');
+    } finally {
+      setRunningId(null);
     }
   };
 
@@ -249,9 +278,18 @@ export default function Workflows() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 160,
+      width: 220,
       render: (_: unknown, record: Workflow) => (
         <Space>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlayCircleOutlined />}
+            loading={runningId === record.id}
+            onClick={() => handleRun(record.id)}
+          >
+            Run
+          </Button>
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -304,7 +342,7 @@ export default function Workflows() {
               100 +
               colWidths.description +
               160 +
-              160,
+              220,
           }}
           pagination={{
             current: page,
@@ -474,6 +512,109 @@ export default function Workflows() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Run Result Modal */}
+      <Modal
+        title="Workflow Run Result"
+        open={runModalOpen}
+        onCancel={() => setRunModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setRunModalOpen(false)}>
+            Close
+          </Button>,
+        ]}
+        width={700}
+      >
+        {runResult && (
+          <>
+            <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Status">
+                <Tag
+                  color={
+                    runResult.status === 'completed'
+                      ? 'success'
+                      : runResult.status === 'failed'
+                        ? 'error'
+                        : 'processing'
+                  }
+                >
+                  {runResult.status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Files">
+                {runResult.total_files}
+              </Descriptions.Item>
+              <Descriptions.Item label="Processed">
+                {runResult.processed_files}
+              </Descriptions.Item>
+              <Descriptions.Item label="Failed">
+                {runResult.failed_files}
+              </Descriptions.Item>
+              {runResult.error_message && (
+                <Descriptions.Item label="Error" span={2}>
+                  {runResult.error_message}
+                </Descriptions.Item>
+              )}
+              <Descriptions.Item label="Started At">
+                {runResult.started_at ? new Date(runResult.started_at).toLocaleString() : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Finished At">
+                {runResult.finished_at ? new Date(runResult.finished_at).toLocaleString() : '-'}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {runResult.pipeline_runs.length > 0 && (
+              <Table
+                dataSource={runResult.pipeline_runs}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                columns={[
+                  {
+                    title: 'Route',
+                    dataIndex: 'route_name',
+                    key: 'route_name',
+                    width: 150,
+                  },
+                  {
+                    title: 'Status',
+                    dataIndex: 'status',
+                    key: 'status',
+                    width: 100,
+                    render: (s: string) => (
+                      <Tag
+                        color={
+                          s === 'completed'
+                            ? 'success'
+                            : s === 'failed'
+                              ? 'error'
+                              : 'processing'
+                        }
+                      >
+                        {s}
+                      </Tag>
+                    ),
+                  },
+                  {
+                    title: 'Files',
+                    key: 'files',
+                    width: 120,
+                    render: (_: unknown, r: { processed_files: number; total_files: number }) =>
+                      `${r.processed_files}/${r.total_files}`,
+                  },
+                  {
+                    title: 'Error',
+                    dataIndex: 'error_message',
+                    key: 'error_message',
+                    ellipsis: true,
+                    render: (msg: string | null) => msg || '-',
+                  },
+                ]}
+              />
+            )}
+          </>
+        )}
       </Modal>
     </div>
   );

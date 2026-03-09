@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.workflow import Workflow
 from app.schemas.common import PaginatedResponse
 from app.schemas.workflow import WorkflowCreate, WorkflowResponse, WorkflowUpdate
+from app.schemas.workflow_run import WorkflowRunDetailResponse
 from app.utils.exceptions import NotFoundException
 from app.utils.pagination import paginate, pagination_params
 
@@ -44,6 +45,28 @@ async def create_workflow(body: WorkflowCreate, db: AsyncSession = Depends(get_d
     await db.commit()
     await db.refresh(workflow)
     return WorkflowResponse.model_validate(workflow)
+
+
+@router.post("/{workflow_id}/run", response_model=WorkflowRunDetailResponse)
+async def run_workflow(workflow_id: str, db: AsyncSession = Depends(get_db)):
+    from app.services.workflow_executor import execute_workflow
+
+    wf_run = await execute_workflow(workflow_id, db)
+
+    # Load pipeline runs for detail response
+    from app.models.workflow_run import PipelineRun
+    from app.schemas.workflow_run import PipelineRunResponse
+
+    pr_result = await db.execute(
+        select(PipelineRun)
+        .where(PipelineRun.workflow_run_id == wf_run.id)
+        .order_by(PipelineRun.created_at)
+    )
+    pipeline_runs = [PipelineRunResponse.model_validate(pr) for pr in pr_result.scalars().all()]
+
+    detail = WorkflowRunDetailResponse.model_validate(wf_run)
+    detail.pipeline_runs = pipeline_runs
+    return detail
 
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)

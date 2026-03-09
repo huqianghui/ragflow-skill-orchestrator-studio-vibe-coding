@@ -291,6 +291,43 @@ export interface Workflow {
   updated_at: string;
 }
 
+// === WorkflowRun ===
+
+export interface PipelineRunRecord {
+  id: string;
+  workflow_run_id: string;
+  pipeline_id: string;
+  route_name: string;
+  target_ids: string[];
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  total_files: number;
+  processed_files: number;
+  failed_files: number;
+  error_message: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflow_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  total_files: number;
+  processed_files: number;
+  failed_files: number;
+  error_message: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowRunDetail extends WorkflowRun {
+  pipeline_runs: PipelineRunRecord[];
+}
+
 // === API Response Types ===
 
 export interface PaginatedResponse<T> {

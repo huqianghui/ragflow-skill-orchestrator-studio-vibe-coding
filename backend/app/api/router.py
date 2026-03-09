@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api import (
     agents,
     connections,
+    dashboard,
     data_sources,
     pipelines,
     runs,
@@ -13,6 +14,7 @@ from app.api import (
 )
 
 api_router = APIRouter()
+api_router.include_router(dashboard.router)
 api_router.include_router(connections.router)
 api_router.include_router(skills.router)
 api_router.include_router(pipelines.router)

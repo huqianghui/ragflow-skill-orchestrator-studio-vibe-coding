@@ -343,3 +343,54 @@ export interface ErrorResponse {
   message: string;
   details: Record<string, unknown> | null;
 }
+
+// === Dashboard Stats ===
+
+export interface DashboardResourceCounts {
+  skills: number;
+  connections: number;
+  pipelines: number;
+  data_sources: number;
+  targets: number;
+  workflows: number;
+  workflow_runs: number;
+  runs: number;
+  agents: number;
+}
+
+export interface DashboardSkillBreakdown {
+  builtin: number;
+  custom: number;
+}
+
+export interface DashboardAgentBreakdown {
+  available: number;
+  unavailable: number;
+}
+
+export interface DashboardWorkflowRunStats {
+  success_rate: number;
+  completed: number;
+  failed: number;
+  running: number;
+  pending: number;
+}
+
+export interface DashboardRecentWorkflowRun {
+  id: string;
+  workflow_id: string;
+  status: string;
+  total_files: number;
+  processed_files: number;
+  failed_files: number;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface DashboardStats {
+  counts: DashboardResourceCounts;
+  skill_breakdown: DashboardSkillBreakdown;
+  agent_breakdown: DashboardAgentBreakdown;
+  workflow_run_stats: DashboardWorkflowRunStats;
+  recent_workflow_runs: DashboardRecentWorkflowRun[];
+}

@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   Connection,
   ConnectionTestResult,
+  DashboardStats,
   DataSource,
   DataSourceTestResult,
   MappingValidationResult,
@@ -203,6 +204,12 @@ export const workflowRunsApi = {
     }).then(r => r.data),
   get: (id: string) =>
     apiClient.get<WorkflowRunDetail>(`/workflow-runs/${id}`).then(r => r.data),
+};
+
+// --- Dashboard ---
+export const dashboardApi = {
+  getStats: () =>
+    apiClient.get<DashboardStats>('/dashboard/stats').then(r => r.data),
 };
 
 export default apiClient;

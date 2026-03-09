@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Spin, Tag, Typography, theme } from 'antd';
 import {
   ApiOutlined,
+  BranchesOutlined,
   DatabaseOutlined,
   ExperimentOutlined,
   HistoryOutlined,
   NodeIndexOutlined,
+  PlayCircleOutlined,
   RobotOutlined,
   SendOutlined,
 } from '@ant-design/icons';
@@ -14,15 +16,8 @@ import { Responsive, useContainerWidth } from 'react-grid-layout';
 import type { Layout, Layouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import {
-  connectionsApi,
-  dataSourcesApi,
-  pipelinesApi,
-  runsApi,
-  skillsApi,
-  targetsApi,
-} from '../services/api';
-import { agentApi } from '../services/agentApi';
+import { dashboardApi } from '../services/api';
+import type { DashboardStats } from '../types';
 
 const { Title, Text } = Typography;
 
@@ -79,6 +74,22 @@ const CARDS: CardDef[] = [
     bg: '#e6fffb',
   },
   {
+    key: 'workflows',
+    title: 'Workflows',
+    path: '/workflows',
+    icon: <BranchesOutlined />,
+    color: '#2f54eb',
+    bg: '#f0f5ff',
+  },
+  {
+    key: 'workflow_runs',
+    title: 'Workflow Runs',
+    path: '/workflow-runs',
+    icon: <PlayCircleOutlined />,
+    color: '#eb2f96',
+    bg: '#fff0f6',
+  },
+  {
     key: 'runhistory',
     title: 'Run History',
     path: '/runs',
@@ -113,26 +124,11 @@ function makeDefaultLayouts(): Layouts {
   };
 }
 
-interface Stats {
-  skills: number | null;
-  builtinSkills: number | null;
-  customSkills: number | null;
-  connections: number | null;
-  pipelines: number | null;
-  datasources: number | null;
-  targets: number | null;
-  runhistory: number | null;
-  agents: number | null;
-  availableAgents: number | null;
-  unavailableAgents: number | null;
-}
-
 function loadLayouts(): Layouts | undefined {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return undefined;
     const saved = JSON.parse(raw) as Layouts;
-    // Ensure all current CARDS are present; place missing cards below existing ones
     const defaults = makeDefaultLayouts();
     const allKeys = new Set(CARDS.map(c => c.key));
     for (const bp of Object.keys(defaults) as Array<keyof Layouts>) {
@@ -142,14 +138,12 @@ function loadLayouts(): Layouts | undefined {
       }
       const items = saved[bp] as Layout[];
       const existing = new Set(items.map(l => l.i));
-      // Find the bottom edge of existing layout
       let maxBottom = 0;
       for (const l of items) {
         maxBottom = Math.max(maxBottom, l.y + l.h);
       }
       for (const dl of defaults[bp] as Layout[]) {
         if (allKeys.has(dl.i) && !existing.has(dl.i)) {
-          // Place new card at the bottom, keeping default x/w/h
           items.push({ ...dl, y: maxBottom });
           maxBottom += dl.h;
         }
@@ -169,12 +163,7 @@ function saveLayouts(layouts: Layouts) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { width, containerRef, mounted } = useContainerWidth({ initialWidth: 1200 });
-  const [stats, setStats] = useState<Stats>({
-    skills: null, builtinSkills: null, customSkills: null,
-    connections: null, pipelines: null,
-    datasources: null, targets: null, runhistory: null,
-    agents: null, availableAgents: null, unavailableAgents: null,
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [layouts, setLayouts] = useState<Layouts>(
     () => loadLayouts() || makeDefaultLayouts(),
@@ -184,34 +173,9 @@ export default function Dashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        const [
-          skillsResp, pipelinesResp, connectionsResp,
-          dsResp, targetsResp, runsResp, agentsList,
-        ] = await Promise.all([
-          skillsApi.list(1, 50),
-          pipelinesApi.list(1, 10),
-          connectionsApi.list(1, 20),
-          dataSourcesApi.list(1, 1),
-          targetsApi.list(1, 1),
-          runsApi.list(1, 1),
-          agentApi.getAvailable().catch(() => []),
-        ]);
-        const allSkills = skillsResp.items;
-        const availableCount = agentsList.filter(a => a.available).length;
-        setStats({
-          skills: skillsResp.total,
-          builtinSkills: allSkills.filter(s => s.is_builtin).length,
-          customSkills: allSkills.filter(s => !s.is_builtin).length,
-          connections: connectionsResp.total,
-          pipelines: pipelinesResp.total,
-          datasources: dsResp.total,
-          targets: targetsResp.total,
-          runhistory: runsResp.total,
-          agents: agentsList.length,
-          availableAgents: availableCount,
-          unavailableAgents: agentsList.length - availableCount,
-        });
-      } catch { /* cards show '-' */ } finally {
+        const data = await dashboardApi.getStats();
+        setStats(data);
+      } catch { /* stats stays null, cards show '-' */ } finally {
         setLoading(false);
       }
     };
@@ -232,16 +196,33 @@ export default function Dashboard() {
     return <Spin style={{ display: 'block', margin: '120px auto' }} size="large" />;
   }
 
-  const getValue = (key: string): number | null => {
-    return stats[key as keyof Stats] ?? null;
+  const getValue = (key: string): number | string => {
+    if (!stats) return '-';
+    const countMap: Record<string, number> = {
+      skills: stats.counts.skills,
+      connections: stats.counts.connections,
+      pipelines: stats.counts.pipelines,
+      datasources: stats.counts.data_sources,
+      targets: stats.counts.targets,
+      workflows: stats.counts.workflows,
+      workflow_runs: stats.counts.workflow_runs,
+      runhistory: stats.counts.runs,
+      agents: stats.counts.agents,
+    };
+    return countMap[key] ?? '-';
   };
 
   const getSubtitle = (key: string): React.ReactNode => {
+    if (!stats) return null;
     if (key === 'skills') {
       return (
         <span style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-          <Tag color="blue" style={{ margin: 0 }}>{stats.builtinSkills ?? 0} built-in</Tag>
-          <Tag color="green" style={{ margin: 0 }}>{stats.customSkills ?? 0} custom</Tag>
+          <Tag color="blue" style={{ margin: 0 }}>
+            {stats.skill_breakdown.builtin} built-in
+          </Tag>
+          <Tag color="green" style={{ margin: 0 }}>
+            {stats.skill_breakdown.custom} custom
+          </Tag>
         </span>
       );
     }
@@ -249,10 +230,19 @@ export default function Dashboard() {
       return (
         <span style={{ display: 'flex', gap: 4, marginTop: 4 }}>
           <Tag color="success" style={{ margin: 0 }}>
-            {stats.availableAgents ?? 0} online
+            {stats.agent_breakdown.available} online
           </Tag>
           <Tag color="default" style={{ margin: 0 }}>
-            {stats.unavailableAgents ?? 0} offline
+            {stats.agent_breakdown.unavailable} offline
+          </Tag>
+        </span>
+      );
+    }
+    if (key === 'workflow_runs') {
+      return (
+        <span style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+          <Tag color="blue" style={{ margin: 0 }}>
+            {stats.workflow_run_stats.success_rate}% success
           </Tag>
         </span>
       );
@@ -338,7 +328,7 @@ export default function Dashboard() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <Text type="secondary" style={{ fontSize: 13 }}>{card.title}</Text>
                     <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.2 }}>
-                      {getValue(card.key) ?? '-'}
+                      {getValue(card.key)}
                     </div>
                     {getSubtitle(card.key)}
                   </div>
@@ -348,6 +338,7 @@ export default function Dashboard() {
           ))}
         </Responsive>
       )}
+
     </div>
   );
 }

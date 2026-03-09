@@ -120,6 +120,20 @@ async def create_data_source(body: DataSourceCreate, db: AsyncSession = Depends(
     return _mask_response(ds)
 
 
+@router.get("/{ds_id}/files")
+async def list_data_source_files(ds_id: str, db: AsyncSession = Depends(get_db)):
+    """List files available in a data source."""
+    from app.services.data_source_reader import FileInfo, list_files
+
+    result = await db.execute(select(DataSource).where(DataSource.id == ds_id))
+    ds = result.scalar_one_or_none()
+    if not ds:
+        raise NotFoundException("DataSource", ds_id)
+
+    files = await list_files(ds.source_type, ds.connection_config or {}, ds.id)
+    return [FileInfo.model_validate(f) for f in files]
+
+
 @router.get("/{ds_id}", response_model=DataSourceResponse)
 async def get_data_source(ds_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(DataSource).where(DataSource.id == ds_id))

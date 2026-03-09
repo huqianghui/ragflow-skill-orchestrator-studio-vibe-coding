@@ -151,6 +151,33 @@ Actions：Test (loading) / Edit (Modal, source_type disabled, secret placeholder
 
 显示：Temp Directory、Max File Size、Total/Used/Available (MB)、Retention (days)、Progress bar（green <70%, yellow 70-90%, red >90%）
 
+## File Reader Service
+
+DataSourceReader 服务提供从 DataSource 枚举和读取文件的能力。
+
+### list_files(source_type, config, ds_id, max_results=1000) → list[FileInfo]
+
+按 source_type 分发，返回 FileInfo 列表。当前支持 `local_upload` 和 `azure_blob`。
+
+### read_file(source_type, config, ds_id, file_path) → bytes
+
+读取单个文件内容。包含路径遍历防护（local_upload）。
+
+### FileInfo 字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| name | str | 文件名 |
+| path | str | 相对路径 |
+| size | int | 文件大小 bytes |
+| mime_type | str, nullable | MIME 类型 |
+| last_modified | datetime, nullable | 最后修改时间 |
+| etag | str, nullable | 用于增量检测 |
+
+### API: GET /api/v1/data-sources/{id}/files
+
+返回 DataSource 中的文件列表（FileInfo 数组）。不存在返回 404。
+
 ### SVG 图标
 
 16 个文件位于 `frontend/public/icons/data-sources/`，kebab-case 命名。卡片中 48x48，列表中 20x20。

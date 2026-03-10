@@ -57,21 +57,22 @@ openspec/
 ```
 backend/
   app/
-    api/           # FastAPI 路由: health, skills, connections, pipelines,
-                   #   runs, targets, data_sources, workflows, workflow_runs, agents
+    api/           # FastAPI 路由 (12 模块): health, skills, connections, pipelines,
+                   #   runs, pipeline_runs, targets, data_sources, workflows,
+                   #   workflow_runs, dashboard, agents
     models/        # SQLAlchemy ORM (13 模型): connection, skill, pipeline, run,
                    #   data_source, target, workflow, workflow_run, pipeline_run,
                    #   processed_file, agent_session, agent_config, agent_message
-    schemas/       # Pydantic 请求/响应 schema:
-                   #   skill, connection, pipeline, run, data_source, target,
-                   #   workflow, workflow_run, agent, common
+    schemas/       # Pydantic 请求/响应 schema (12 模块):
+                   #   skill, connection, pipeline, run, pipeline_runs, data_source,
+                   #   target, workflow, workflow_run, dashboard, agent, common
     services/      # 业务逻辑层
                    #   skill_runner, venv_manager, skill_seeder, skill_context
                    #   upload_manager, temp_file_manager
                    #   data_source_tester, data_source_reader, target_tester, target_writer
                    #   target_index_manager, target_schema_discovery, mapping_engine
                    #   workflow_executor (路由匹配 + 增量处理 + 执行编排)
-                   #   builtin_skills/ (base, runner, 7 类内置 Skill 实现)
+                   #   builtin_skills/ (base, runner, 6 类内置 Skill 实现)
                    #   pipeline/ (enrichment_tree, runner)
                    #   agents/ (base, registry, session_proxy, context_builder,
                    #            adapters/: claude_code, codex, copilot)
@@ -81,17 +82,17 @@ backend/
     database.py    # 异步引擎 & session 工厂
     main.py        # FastAPI app, lifespan, 路由注册, 后台刷新任务
   alembic/         # 数据库迁移脚本
-  tests/           # pytest 测试 (31 个测试文件)
+  tests/           # pytest 测试 (35 个测试文件)
   data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
 frontend/
   src/
-    pages/         # 17 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
+    pages/         # 18 个路由级页面组件 (Dashboard, SkillLibrary, SkillEditor,
                    #   BuiltinSkillEditor, Connections, Pipelines, PipelineEditor,
                    #   DataSources, DataSourceNew, Targets, TargetNew,
-                   #   Workflows, WorkflowRunHistory,
-                   #   RunHistory, Settings, AgentPlayground, AgentHistory)
+                   #   Workflows, WorkflowEditor, WorkflowRunHistory,
+                   #   PipelineRuns, Settings, AgentPlayground, AgentHistory)
     components/    # 可复用 UI 组件:
                    #   AppLayout, PageHeader, ListToolbar, TableUtils,
                    #   ConfigSchemaForm, ThemeSwitcher
@@ -102,13 +103,14 @@ frontend/
     stores/        # Zustand 状态管理: themeStore.ts
     utils/         # 工具函数: time.ts (UTC 时间处理)
     types/         # TypeScript 类型定义: index.ts, agent.ts
-  e2e/             # Playwright E2E 测试 (7 个 spec 文件):
+  e2e/             # Playwright E2E 测试 (11 个 spec 文件):
                    #   agent-playground, agent-history-table, agent-session-restore,
-                   #   agent-chat-ui, editor-layout, workflows, workflow-run-history
+                   #   agent-chat-ui, editor-layout, workflows, workflow-editor,
+                   #   workflow-run-history, pipeline-crud, pipeline-editor, pipeline-runs
   public/
     icons/         # SVG 图标 (data-sources/, targets/)
 
-openspec/          # 产品规格 — 20 个 spec, 33 个已归档变更 (详见上方文档分层体系)
+openspec/          # 产品规格 — 22 个 spec, 37 个已归档变更 (详见上方文档分层体系)
 ```
 
 ---

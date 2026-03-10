@@ -30,6 +30,7 @@ specs:
   - skill-library-ui/spec.md
   - skill-editor-ui/spec.md
   - pipeline-editor-ui/spec.md
+  - workflow-editor-ui/spec.md
   - editor-accordion-layout/spec.md
   - unified-table-ui/spec.md
   - page-header-component/spec.md

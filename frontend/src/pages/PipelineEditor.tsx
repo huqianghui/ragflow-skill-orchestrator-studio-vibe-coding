@@ -24,8 +24,10 @@ import type {
   PipelineNode, Skill,
 } from '../types';
 import { pipelinesApi } from '../services/api';
-import type { PipelineAction } from '../types/agent';
+import type { AgentInfo, PipelineAction } from '../types/agent';
+import { agentApi } from '../services/agentApi';
 import AgentChatWidget from '../components/agent/AgentChatWidget';
+import AgentSelector from '../components/agent/AgentSelector';
 
 const { Title, Text, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -397,6 +399,11 @@ export default function PipelineEditor() {
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
   const [showAgent, setShowAgent] = useState(false);
 
+  // Agent state
+  const [agentList, setAgentList] = useState<AgentInfo[]>([]);
+  const [selectedAgentName, setSelectedAgentName] = useState('');
+  const [selectedAgentMode, setSelectedAgentMode] = useState('ask');
+
   // Debug state
   const [debugFile, setDebugFile] = useState<File | null>(null);
   const [debugRunning, setDebugRunning] = useState(false);
@@ -425,6 +432,18 @@ export default function PipelineEditor() {
     };
     load();
   }, [id]);
+
+  // Load agents
+  useEffect(() => {
+    agentApi.getAvailable().then(list => {
+      setAgentList(list);
+      const first = list.find(a => a.available);
+      if (first) {
+        setSelectedAgentName(first.name);
+        setSelectedAgentMode(first.modes.includes('ask') ? 'ask' : first.modes[0] || 'code');
+      }
+    }).catch(() => { /* agents may not be configured */ });
+  }, []);
 
   const setMode = (m: 'edit' | 'debug') => {
     setSearchParams(m === 'debug' ? { mode: 'debug' } : {});
@@ -653,6 +672,11 @@ export default function PipelineEditor() {
               onToggleAgent={() => setShowAgent(prev => !prev)}
               pipelineName={pipeline.name}
               onApplyPipelineAction={handlePipelineAction}
+              agentList={agentList}
+              selectedAgentName={selectedAgentName}
+              selectedAgentMode={selectedAgentMode}
+              onAgentChange={setSelectedAgentName}
+              onAgentModeChange={setSelectedAgentMode}
             />
           </ReactFlowProvider>
         ) : (
@@ -670,6 +694,11 @@ export default function PipelineEditor() {
             onToggleAgent={() => setShowAgent(prev => !prev)}
             pipelineName={pipeline.name}
             onApplyPipelineAction={handlePipelineAction}
+            agentList={agentList}
+            selectedAgentName={selectedAgentName}
+            selectedAgentMode={selectedAgentMode}
+            onAgentChange={setSelectedAgentName}
+            onAgentModeChange={setSelectedAgentMode}
           />
         )}
       </div>
@@ -693,6 +722,7 @@ function EditMode({
   nodes, skills, availablePaths, selectedNodeId, setSelectedNodeId,
   updateNode, removeNode, setNodes,
   showAgent, onToggleAgent, pipelineName, onApplyPipelineAction,
+  agentList, selectedAgentName, selectedAgentMode, onAgentChange, onAgentModeChange,
 }: {
   nodes: PipelineNode[];
   skills: Skill[];
@@ -706,6 +736,11 @@ function EditMode({
   onToggleAgent?: () => void;
   pipelineName: string;
   onApplyPipelineAction: (action: PipelineAction) => void;
+  agentList: AgentInfo[];
+  selectedAgentName: string;
+  selectedAgentMode: string;
+  onAgentChange: (name: string) => void;
+  onAgentModeChange: (mode: string) => void;
 }) {
   const { token: editToken } = theme.useToken();
   const [sidebarTab, setSidebarTab] = useState<'skills' | 'config'>('skills');
@@ -962,16 +997,18 @@ function EditMode({
         width: sidebarCollapsed ? 40 : 380,
         minWidth: sidebarCollapsed ? 40 : 380,
         borderLeft: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgLayout,
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
         transition: 'width 0.2s, min-width 0.2s',
       }}>
         {/* Collapse toggle */}
         <div
           onClick={() => setSidebarCollapsed(prev => !prev)}
           style={{
-            padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+            height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
             borderBottom: `1px solid ${editToken.colorBorderSecondary}`, background: editToken.colorBgContainer,
-            color: editToken.colorTextSecondary, fontSize: 14,
+            color: editToken.colorTextSecondary, fontSize: 18,
+            flexShrink: 0,
           }}
         >
           {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -979,7 +1016,7 @@ function EditMode({
 
         {!sidebarCollapsed && (
           showAgent ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <Collapse
                 size="small"
                 activeKey={['agent']}
@@ -993,9 +1030,21 @@ function EditMode({
                   key: 'agent',
                   label: 'Agent Assistant',
                   children: (
-                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                    <div style={{ height: 'calc(100vh - 260px)', overflow: 'hidden' }}>
+                      <AgentSelector
+                        compact
+                        agents={agentList}
+                        selectedAgent={selectedAgentName}
+                        selectedMode={selectedAgentMode}
+                        onAgentChange={onAgentChange}
+                        onModeChange={onAgentModeChange}
+                      />
                       <AgentChatWidget
                         embedded
+                        agents={agentList}
+                        agentName={selectedAgentName}
+                        agentMode={selectedAgentMode}
+                        onModeChange={onAgentModeChange}
                         autoContext={{
                           type: 'pipeline',
                           data: { nodes, name: pipelineName },
@@ -1370,6 +1419,7 @@ function DebugMode({
   nodes, debugFile, setDebugFile, debugRunning, debugResult,
   selectedNodeId, setSelectedNodeId, selectedNodeResult, runDebug,
   showAgent, onToggleAgent, pipelineName, onApplyPipelineAction,
+  agentList, selectedAgentName, selectedAgentMode, onAgentChange, onAgentModeChange,
 }: {
   nodes: PipelineNode[];
   debugFile: File | null;
@@ -1384,6 +1434,11 @@ function DebugMode({
   onToggleAgent?: () => void;
   pipelineName: string;
   onApplyPipelineAction: (action: PipelineAction) => void;
+  agentList: AgentInfo[];
+  selectedAgentName: string;
+  selectedAgentMode: string;
+  onAgentChange: (name: string) => void;
+  onAgentModeChange: (mode: string) => void;
 }) {
   const { token: debugToken } = theme.useToken();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -1502,17 +1557,18 @@ function DebugMode({
         borderLeft: `1px solid ${debugToken.colorBorderSecondary}`,
         background: debugToken.colorBgLayout,
         display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
         transition: 'width 0.2s, min-width 0.2s',
       }}>
         {/* Collapse toggle */}
         <div
           onClick={() => setSidebarCollapsed(prev => !prev)}
           style={{
-            padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+            height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
             borderBottom: `1px solid ${debugToken.colorBorderSecondary}`,
             background: debugToken.colorBgContainer,
-            color: debugToken.colorTextSecondary, fontSize: 14,
+            color: debugToken.colorTextSecondary, fontSize: 18,
+            flexShrink: 0,
           }}
         >
           {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -1533,9 +1589,21 @@ function DebugMode({
                 key: 'agent',
                 label: 'Agent Assistant',
                 children: (
-                  <div style={{ height: 'calc(100vh - 260px)' }}>
+                  <div style={{ height: 'calc(100vh - 260px)', overflow: 'hidden' }}>
+                    <AgentSelector
+                      compact
+                      agents={agentList}
+                      selectedAgent={selectedAgentName}
+                      selectedMode={selectedAgentMode}
+                      onAgentChange={onAgentChange}
+                      onModeChange={onAgentModeChange}
+                    />
                     <AgentChatWidget
                       embedded
+                      agents={agentList}
+                      agentName={selectedAgentName}
+                      agentMode={selectedAgentMode}
+                      onModeChange={onAgentModeChange}
                       autoContext={{
                         type: 'pipeline',
                         data: { nodes, name: pipelineName },

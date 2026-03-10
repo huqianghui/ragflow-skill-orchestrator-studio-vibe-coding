@@ -25,9 +25,12 @@ import {
 } from '@ant-design/icons';
 import Editor from '@monaco-editor/react';
 import type { Connection, PreloadedImports, SkillTestResult } from '../types';
+import type { AgentInfo } from '../types/agent';
 import { connectionsApi, skillsApi } from '../services/api';
+import { agentApi } from '../services/agentApi';
 import PageHeader from '../components/PageHeader';
 import AgentChatWidget from '../components/agent/AgentChatWidget';
+import AgentSelector from '../components/agent/AgentSelector';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -92,6 +95,11 @@ export default function SkillEditor() {
   // Test results
   const [testResult, setTestResult] = useState<SkillTestResult | null>(null);
 
+  // Agent state
+  const [agentList, setAgentList] = useState<AgentInfo[]>([]);
+  const [selectedAgentName, setSelectedAgentName] = useState('');
+  const [selectedAgentMode, setSelectedAgentMode] = useState('ask');
+
   // Warn on unsaved changes when leaving page
   useEffect(() => {
     if (!dirty) return;
@@ -147,11 +155,24 @@ export default function SkillEditor() {
     }
   }, [id, isNew]);
 
+  const fetchAgents = useCallback(async () => {
+    try {
+      const list = await agentApi.getAvailable();
+      setAgentList(list);
+      const first = list.find(a => a.available);
+      if (first) {
+        setSelectedAgentName(first.name);
+        setSelectedAgentMode(first.modes.includes('ask') ? 'ask' : first.modes[0] || 'code');
+      }
+    } catch { /* agents may not be configured */ }
+  }, []);
+
   useEffect(() => {
     fetchPreloadedImports();
     fetchConnections();
     fetchSkill();
-  }, [fetchPreloadedImports, fetchConnections, fetchSkill]);
+    fetchAgents();
+  }, [fetchPreloadedImports, fetchConnections, fetchSkill, fetchAgents]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -368,7 +389,6 @@ export default function SkillEditor() {
           flexShrink: 0,
           borderLeft: `1px solid ${token.colorBorderSecondary}`,
           background: token.colorBgLayout,
-          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           transition: 'width 0.2s, min-width 0.2s',
@@ -377,10 +397,12 @@ export default function SkillEditor() {
           <div
             onClick={() => setSidebarCollapsed(prev => !prev)}
             style={{
-              padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+              height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
               borderBottom: `1px solid ${token.colorBorderSecondary}`,
               background: token.colorBgContainer,
-              color: token.colorTextSecondary, fontSize: 14,
+              color: token.colorTextSecondary, fontSize: 18,
+              flexShrink: 0,
             }}
           >
             {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -401,9 +423,21 @@ export default function SkillEditor() {
                   key: 'agent',
                   label: 'Agent Assistant',
                   children: (
-                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                    <div style={{ height: 'calc(100vh - 260px)', overflow: 'hidden' }}>
+                      <AgentSelector
+                        compact
+                        agents={agentList}
+                        selectedAgent={selectedAgentName}
+                        selectedMode={selectedAgentMode}
+                        onAgentChange={setSelectedAgentName}
+                        onModeChange={setSelectedAgentMode}
+                      />
                       <AgentChatWidget
                         embedded
+                        agents={agentList}
+                        agentName={selectedAgentName}
+                        agentMode={selectedAgentMode}
+                        onModeChange={setSelectedAgentMode}
                         autoContext={{
                           type: 'skill',
                           data: { name, description, source_code: sourceCode },
@@ -416,6 +450,7 @@ export default function SkillEditor() {
               />
             </div>
           ) : (
+            <div style={{ flex: 1, overflow: 'hidden' }}>
             <Collapse
               size="small"
               activeKey={configPanels}
@@ -592,6 +627,7 @@ export default function SkillEditor() {
                 },
               ]}
             />
+            </div>
           ))}
         </div>
       </div>

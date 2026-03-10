@@ -33,10 +33,13 @@ import {
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import type { Connection, Skill, SkillTestResult } from '../types';
+import type { AgentInfo } from '../types/agent';
 import { connectionsApi, skillsApi } from '../services/api';
+import { agentApi } from '../services/agentApi';
 import ConfigSchemaForm from '../components/ConfigSchemaForm';
 import PageHeader from '../components/PageHeader';
 import AgentChatWidget from '../components/agent/AgentChatWidget';
+import AgentSelector from '../components/agent/AgentSelector';
 
 const { Text, Paragraph } = Typography;
 
@@ -87,6 +90,11 @@ export default function BuiltinSkillEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  // Agent state
+  const [agentList, setAgentList] = useState<AgentInfo[]>([]);
+  const [selectedAgentName, setSelectedAgentName] = useState('');
+  const [selectedAgentMode, setSelectedAgentMode] = useState('ask');
+
   const isFileOnly = skill ? FILE_ONLY_SKILLS.has(skill.name) : false;
   const isDocCracker = skill?.name === 'DocumentCracker';
 
@@ -130,9 +138,22 @@ export default function BuiltinSkillEditor() {
     }
   }, [id, form]);
 
+  const fetchAgents = useCallback(async () => {
+    try {
+      const list = await agentApi.getAvailable();
+      setAgentList(list);
+      const first = list.find(a => a.available);
+      if (first) {
+        setSelectedAgentName(first.name);
+        setSelectedAgentMode(first.modes.includes('ask') ? 'ask' : first.modes[0] || 'code');
+      }
+    } catch { /* agents may not be configured */ }
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchAgents();
+  }, [fetchData, fetchAgents]);
 
   const compatibleConnections = connections.filter((c) =>
     skill?.required_resource_types?.includes(c.connection_type)
@@ -530,8 +551,20 @@ export default function BuiltinSkillEditor() {
                     label: 'Agent Assistant',
                     children: (
                       <div style={{ height: 'calc(100vh - 260px)' }}>
+                        <AgentSelector
+                          compact
+                          agents={agentList}
+                          selectedAgent={selectedAgentName}
+                          selectedMode={selectedAgentMode}
+                          onAgentChange={setSelectedAgentName}
+                          onModeChange={setSelectedAgentMode}
+                        />
                         <AgentChatWidget
                           embedded
+                          agents={agentList}
+                          agentName={selectedAgentName}
+                          agentMode={selectedAgentMode}
+                          onModeChange={setSelectedAgentMode}
                           autoContext={{
                             type: 'skill',
                             data: {
@@ -956,7 +989,6 @@ export default function BuiltinSkillEditor() {
           flexShrink: 0,
           borderLeft: `1px solid ${token.colorBorderSecondary}`,
           background: token.colorBgLayout,
-          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           transition: 'width 0.2s, min-width 0.2s',
@@ -965,10 +997,12 @@ export default function BuiltinSkillEditor() {
           <div
             onClick={() => setSidebarCollapsed(prev => !prev)}
             style={{
-              padding: '8px 0', textAlign: 'center', cursor: 'pointer',
+              height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
               borderBottom: `1px solid ${token.colorBorderSecondary}`,
               background: token.colorBgContainer,
-              color: token.colorTextSecondary, fontSize: 14,
+              color: token.colorTextSecondary, fontSize: 18,
+              flexShrink: 0,
             }}
           >
             {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -989,9 +1023,21 @@ export default function BuiltinSkillEditor() {
                   key: 'agent',
                   label: 'Agent Assistant',
                   children: (
-                    <div style={{ height: 'calc(100vh - 260px)' }}>
+                    <div style={{ height: 'calc(100vh - 260px)', overflow: 'hidden' }}>
+                      <AgentSelector
+                        compact
+                        agents={agentList}
+                        selectedAgent={selectedAgentName}
+                        selectedMode={selectedAgentMode}
+                        onAgentChange={setSelectedAgentName}
+                        onModeChange={setSelectedAgentMode}
+                      />
                       <AgentChatWidget
                         embedded
+                        agents={agentList}
+                        agentName={selectedAgentName}
+                        agentMode={selectedAgentMode}
+                        onModeChange={setSelectedAgentMode}
                         autoContext={{
                           type: 'skill',
                           data: {
@@ -1009,6 +1055,7 @@ export default function BuiltinSkillEditor() {
               />
             </div>
           ) : (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
           <Collapse
             size="small"
             activeKey={activePanels}
@@ -1169,6 +1216,7 @@ export default function BuiltinSkillEditor() {
               },
             ]}
           />
+          </div>
           ))}
         </div>
       </div>

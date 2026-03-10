@@ -28,7 +28,16 @@ export default function ContextPanel({
     <div style={{ marginBottom: compact ? 6 : 10, padding: compact ? '4px 0' : '6px 0' }}>
       <Space size={4} wrap>
         {autoContext && (
-          <Tag color="blue" style={{ fontSize: compact ? 11 : 12 }}>
+          <Tag
+            color="blue"
+            style={{
+              fontSize: compact ? 11 : 12,
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            title={`${autoContext.type === 'skill' ? 'Skill' : 'Pipeline'}: ${String(autoContext.data?.name || 'current')}`}
+          >
             <PaperClipOutlined /> {autoContext.type === 'skill' ? 'Skill' : 'Pipeline'}: {String(autoContext.data?.name || 'current')}
           </Tag>
         )}

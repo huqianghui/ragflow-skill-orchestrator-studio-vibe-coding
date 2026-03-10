@@ -19,52 +19,40 @@ interface AgentSelectorProps {
 export default function AgentSelector({
   agents, selectedAgent, onAgentChange, onModeChange, onInvoke, compact,
 }: AgentSelectorProps) {
-  // Compact mode: Select-based UI for embedded (skill/pipeline editor) usage
+  // Compact mode: agent-only dropdown for embedded (skill/pipeline editor) usage.
+  // Mode selection is handled by ModeBar inside AgentChatWidget, so we don't
+  // render a separate mode dropdown here.
   if (compact) {
-    const currentAgent = agents.find(a => a.name === selectedAgent);
-    const modes = currentAgent?.modes ?? [];
     return (
       <div style={{ marginBottom: 8 }}>
-        <Space size={8} wrap>
-          <Select
-            value={selectedAgent}
-            onChange={(val: string) => {
-              onAgentChange(val);
-              const agent = agents.find(a => a.name === val);
-              if (agent && agent.modes.length > 0) {
-                const preferredMode = agent.modes.includes('ask') ? 'ask' : agent.modes[0];
-                onModeChange(preferredMode);
-              }
-            }}
-            style={{ minWidth: 140 }}
-            size="small"
-            options={agents.map(a => ({
-              value: a.name,
-              label: (
-                <Space size={4}>
-                  <span>{a.display_name}</span>
-                  <Tag
-                    color={a.available ? 'success' : 'default'}
-                    style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
-                  >
-                    {a.available ? 'ON' : 'OFF'}
-                  </Tag>
-                </Space>
-              ),
-              disabled: !a.available,
-            }))}
-          />
-          <Select
-            value={modes[0] || ''}
-            onChange={onModeChange}
-            style={{ minWidth: 90 }}
-            size="small"
-            options={modes.map(m => ({
-              value: m,
-              label: m.charAt(0).toUpperCase() + m.slice(1),
-            }))}
-          />
-        </Space>
+        <Select
+          value={selectedAgent}
+          onChange={(val: string) => {
+            onAgentChange(val);
+            const agent = agents.find(a => a.name === val);
+            if (agent && agent.modes.length > 0) {
+              const preferredMode = agent.modes.includes('ask') ? 'ask' : agent.modes[0];
+              onModeChange(preferredMode);
+            }
+          }}
+          style={{ width: '100%' }}
+          size="small"
+          options={agents.map(a => ({
+            value: a.name,
+            label: (
+              <Space size={4}>
+                <span>{a.display_name}</span>
+                <Tag
+                  color={a.available ? 'success' : 'default'}
+                  style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
+                >
+                  {a.available ? 'ON' : 'OFF'}
+                </Tag>
+              </Space>
+            ),
+            disabled: !a.available,
+          }))}
+        />
       </div>
     );
   }

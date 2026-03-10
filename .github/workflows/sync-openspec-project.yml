@@ -1,0 +1,20 @@
+name: Sync OpenSpec to GitHub Project
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'openspec/changes/**'
+
+jobs:
+  sync-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync OpenSpec changes to GitHub Project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_PAT }}
+        run: bash .github/scripts/sync-openspec-project.sh

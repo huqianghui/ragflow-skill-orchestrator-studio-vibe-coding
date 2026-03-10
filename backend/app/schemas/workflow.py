@@ -27,6 +27,7 @@ class DefaultRoute(BaseModel):
 class WorkflowCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
+    graph_data: dict | None = None
     data_source_ids: list[str] = Field(default_factory=list)
     routes: list[RouteRule] = Field(default_factory=list)
     default_route: DefaultRoute | None = None
@@ -36,6 +37,7 @@ class WorkflowUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     status: str | None = Field(default=None, pattern=r"^(draft|active|archived)$")
+    graph_data: dict | None = None
     data_source_ids: list[str] | None = None
     routes: list[RouteRule] | None = None
     default_route: DefaultRoute | None = None
@@ -46,6 +48,7 @@ class WorkflowResponse(BaseModel):
     name: str
     description: str | None
     status: str
+    graph_data: dict | None
     data_source_ids: list
     routes: list
     default_route: dict | None

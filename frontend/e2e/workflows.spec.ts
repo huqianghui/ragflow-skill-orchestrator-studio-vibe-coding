@@ -126,7 +126,7 @@ test.describe('Workflows page — search', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  创建 Workflow Modal                                                */
+/*  创建 Workflow Modal (简化版：仅 Name + Description)                  */
 /* ------------------------------------------------------------------ */
 test.describe('Workflows page — create modal', () => {
   let api: APIRequestContext;
@@ -155,10 +155,9 @@ test.describe('Workflows page — create modal', () => {
     await expect(modal).toBeVisible();
     await expect(modal.locator('text=New Workflow')).toBeVisible();
 
-    // Form fields should be visible
+    // Simplified form: only Name and Description
     await expect(modal.locator('label:has-text("Name")')).toBeVisible();
     await expect(modal.locator('label:has-text("Description")')).toBeVisible();
-    await expect(modal.locator('label:has-text("Data Sources")')).toBeVisible();
 
     // Close modal
     await modal.locator('button:has-text("Cancel")').click();
@@ -166,7 +165,7 @@ test.describe('Workflows page — create modal', () => {
     await expect(page.locator('.ant-modal-body')).not.toBeVisible();
   });
 
-  test('should create a workflow via modal', async ({ page }) => {
+  test('should create a workflow and navigate to editor', async ({ page }) => {
     await page.goto('/workflows');
     await waitForAppReady(page);
     await page.waitForTimeout(2000);
@@ -183,30 +182,26 @@ test.describe('Workflows page — create modal', () => {
 
     // Submit
     await modal.locator('button:has-text("Create")').click();
+
+    // Should navigate to the flow editor
+    await page.waitForURL(/\/workflows\/.*\/edit/, { timeout: 10000 });
+    expect(page.url()).toMatch(/\/workflows\/[\w-]+\/edit/);
+
+    // Extract workflow ID from URL for cleanup
+    const urlMatch = page.url().match(/\/workflows\/([\w-]+)\/edit/);
+    if (urlMatch) createdId = urlMatch[1];
+
+    // Editor should load with the workflow name
+    await waitForAppReady(page);
     await page.waitForTimeout(2000);
-
-    // Modal should close
-    await expect(page.locator('.ant-modal-body')).not.toBeVisible();
-
-    // The newly created workflow should appear in the table
-    await expect(
-      page.locator('.ant-table-row:has-text("E2E Created Workflow")').first(),
-    ).toBeVisible();
-
-    // Cleanup: find the created workflow's ID via API
-    const resp = await api.get(`${API_BASE}/workflows?page=1&page_size=100`);
-    const data = await resp.json();
-    const found = data.items.find(
-      (w: { name: string; id: string }) => w.name === 'E2E Created Workflow',
-    );
-    if (found) createdId = found.id;
+    await expect(page.locator('text=E2E Created Workflow').first()).toBeVisible();
   });
 });
 
 /* ------------------------------------------------------------------ */
-/*  编辑 Workflow Modal                                                */
+/*  编辑导航 (点击名称/Edit 按钮 → 跳转到编辑器)                          */
 /* ------------------------------------------------------------------ */
-test.describe('Workflows page — edit modal', () => {
+test.describe('Workflows page — edit navigation', () => {
   let api: APIRequestContext;
   let workflowId: string;
 
@@ -221,7 +216,7 @@ test.describe('Workflows page — edit modal', () => {
     await api.dispose();
   });
 
-  test('should open edit modal when clicking workflow name', async ({ page }) => {
+  test('should navigate to editor when clicking workflow name', async ({ page }) => {
     await page.goto('/workflows');
     await waitForAppReady(page);
     await page.waitForTimeout(2000);
@@ -230,22 +225,30 @@ test.describe('Workflows page — edit modal', () => {
     const nameLink = page.locator('.ant-table-row a:has-text("E2E Edit Target")');
     await expect(nameLink).toBeVisible();
     await nameLink.click();
-    await page.waitForTimeout(500);
 
-    // Edit modal should open
-    const modal = page.locator('.ant-modal');
-    await expect(modal).toBeVisible();
-    await expect(modal.locator('text=Edit Workflow')).toBeVisible();
+    // Should navigate to the flow editor
+    await page.waitForURL(/\/workflows\/.*\/edit/, { timeout: 10000 });
+    expect(page.url()).toContain(`/workflows/${workflowId}/edit`);
 
-    // Status field should be visible in edit mode
-    await expect(modal.locator('label:has-text("Status")')).toBeVisible();
+    // Editor should show the workflow name
+    await waitForAppReady(page);
+    await page.waitForTimeout(2000);
+    await expect(page.locator('text=E2E Edit Target').first()).toBeVisible();
+  });
 
-    // Name should be pre-filled
-    const nameInput = modal.locator('#name');
-    await expect(nameInput).toHaveValue('E2E Edit Target');
+  test('should navigate to editor when clicking Edit button', async ({ page }) => {
+    await page.goto('/workflows');
+    await waitForAppReady(page);
+    await page.waitForTimeout(2000);
 
-    // Close
-    await modal.locator('button:has-text("Cancel")').click();
+    // Find the row and click "Edit" button
+    const row = page.locator('.ant-table-row:has-text("E2E Edit Target")');
+    await expect(row).toBeVisible();
+    await row.locator('button:has-text("Edit")').click();
+
+    // Should navigate to the flow editor
+    await page.waitForURL(/\/workflows\/.*\/edit/, { timeout: 10000 });
+    expect(page.url()).toContain(`/workflows/${workflowId}/edit`);
   });
 });
 

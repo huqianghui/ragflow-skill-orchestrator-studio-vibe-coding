@@ -9,7 +9,6 @@ import {
   message,
   Modal,
   Popconfirm,
-  Select,
   Space,
   Table,
   Tag,
@@ -22,8 +21,8 @@ import {
   PlayCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Workflow, Pipeline, DataSource, Target, RouteRule, WorkflowRunDetail } from '../types';
-import { workflowsApi, pipelinesApi, dataSourcesApi, targetsApi } from '../services/api';
+import type { Workflow, WorkflowRunDetail } from '../types';
+import { workflowsApi } from '../services/api';
 import { ResizableTitle, OverflowPopover, makeResizeHandler } from '../components/TableUtils';
 import PageHeader from '../components/PageHeader';
 import ListToolbar from '../components/ListToolbar';
@@ -43,14 +42,8 @@ export default function Workflows() {
   const [pageSize, setPageSize] = useState(20);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [form] = Form.useForm();
-
-  // Lookups for pipelines, data sources, targets
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-  const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  const [targets, setTargets] = useState<Target[]>([]);
 
   // Run state
   const [runningId, setRunningId] = useState<string | null>(null);
@@ -74,21 +67,6 @@ export default function Workflows() {
       message.error('Failed to load workflows');
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const fetchLookups = useCallback(async () => {
-    try {
-      const [pipResp, dsResp, tgtResp] = await Promise.all([
-        pipelinesApi.list(1, 100),
-        dataSourcesApi.list(1, 100),
-        targetsApi.list(1, 100),
-      ]);
-      setPipelines(pipResp.items);
-      setDataSources(dsResp.items);
-      setTargets(tgtResp.items);
-    } catch {
-      // Silently ignore — lookups are optional
     }
   }, []);
 
@@ -136,30 +114,7 @@ export default function Workflows() {
   };
 
   const openCreateForm = () => {
-    setEditingWorkflow(null);
     form.resetFields();
-    fetchLookups();
-    setFormOpen(true);
-  };
-
-  const openEditForm = (workflow: Workflow) => {
-    setEditingWorkflow(workflow);
-    fetchLookups();
-    form.setFieldsValue({
-      name: workflow.name,
-      description: workflow.description || '',
-      status: workflow.status,
-      data_source_ids: workflow.data_source_ids,
-      routes: workflow.routes.map((r: RouteRule) => ({
-        name: r.name,
-        priority: r.priority,
-        extensions: r.file_filter?.extensions?.join(', ') || '',
-        pipeline_id: r.pipeline_id,
-        target_ids: r.target_ids,
-      })),
-      default_pipeline_id: workflow.default_route?.pipeline_id,
-      default_target_ids: workflow.default_route?.target_ids,
-    });
     setFormOpen(true);
   };
 
@@ -168,52 +123,19 @@ export default function Workflows() {
       const values = await form.validateFields();
       setFormLoading(true);
 
-      // Build routes from form values
-      const routes: RouteRule[] = (values.routes || []).map(
-        (r: { name: string; priority?: number; extensions?: string; pipeline_id: string; target_ids?: string[] }, idx: number) => ({
-          name: r.name,
-          priority: r.priority ?? idx,
-          file_filter: {
-            extensions: r.extensions
-              ? r.extensions.split(',').map((e: string) => e.trim()).filter(Boolean)
-              : [],
-          },
-          pipeline_id: r.pipeline_id,
-          target_ids: r.target_ids || [],
-        }),
-      );
-
-      const defaultRoute = values.default_pipeline_id
-        ? {
-            name: 'default',
-            pipeline_id: values.default_pipeline_id,
-            target_ids: values.default_target_ids || [],
-          }
-        : null;
-
       const payload = {
         name: values.name,
         description: values.description || null,
-        status: values.status || 'draft',
-        data_source_ids: values.data_source_ids || [],
-        routes,
-        default_route: defaultRoute,
       };
 
-      if (editingWorkflow) {
-        await workflowsApi.update(editingWorkflow.id, payload);
-        message.success('Workflow updated');
-      } else {
-        await workflowsApi.create(payload);
-        message.success('Workflow created');
-      }
-
+      const created = await workflowsApi.create(payload);
+      message.success('Workflow created');
       setFormOpen(false);
       form.resetFields();
-      fetchWorkflows(page, pageSize);
+      navigate(`/workflows/${created.id}/edit`);
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return;
-      message.error('Failed to save workflow');
+      message.error('Failed to create workflow');
     } finally {
       setFormLoading(false);
     }
@@ -231,7 +153,7 @@ export default function Workflows() {
         onResize: handleResize('name', 100),
       }),
       render: (name: string, record: Workflow) => (
-        <a onClick={() => openEditForm(record)}>
+        <a onClick={() => navigate(`/workflows/${record.id}/edit`)}>
           <OverflowPopover text={name} />
         </a>
       ),
@@ -305,7 +227,7 @@ export default function Workflows() {
           <Button
             size="small"
             icon={<EditOutlined />}
-            onClick={() => openEditForm(record)}
+            onClick={() => navigate(`/workflows/${record.id}/edit`)}
           >
             Edit
           </Button>
@@ -375,7 +297,7 @@ export default function Workflows() {
       </Card>
 
       <Modal
-        title={editingWorkflow ? 'Edit Workflow' : 'New Workflow'}
+        title="New Workflow"
         open={formOpen}
         onCancel={() => {
           setFormOpen(false);
@@ -383,9 +305,9 @@ export default function Workflows() {
         }}
         onOk={handleFormSubmit}
         confirmLoading={formLoading}
-        okText={editingWorkflow ? 'Update' : 'Create'}
+        okText="Create"
         destroyOnClose
-        width={720}
+        width={480}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -399,129 +321,6 @@ export default function Workflows() {
           </Form.Item>
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={2} placeholder="Optional description" />
-          </Form.Item>
-          {editingWorkflow && (
-            <Form.Item name="status" label="Status">
-              <Select>
-                <Select.Option value="draft">Draft</Select.Option>
-                <Select.Option value="active">Active</Select.Option>
-                <Select.Option value="archived">Archived</Select.Option>
-              </Select>
-            </Form.Item>
-          )}
-          <Form.Item name="data_source_ids" label="Data Sources">
-            <Select
-              mode="multiple"
-              placeholder="Select data sources"
-              options={dataSources.map((ds) => ({
-                label: ds.name,
-                value: ds.id,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.List name="routes">
-            {(fields, { add, remove }) => (
-              <>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>
-                  Routes
-                </div>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Card
-                    key={key}
-                    size="small"
-                    style={{ marginBottom: 12 }}
-                    extra={
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        onClick={() => remove(name)}
-                      >
-                        Remove
-                      </Button>
-                    }
-                  >
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'name']}
-                      label="Route Name"
-                      rules={[{ required: true, message: 'Route name required' }]}
-                    >
-                      <Input placeholder="e.g. PDF Processing" />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'extensions']}
-                      label="File Extensions (comma-separated)"
-                    >
-                      <Input placeholder="e.g. pdf, docx, xlsx" />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'pipeline_id']}
-                      label="Pipeline"
-                      rules={[{ required: true, message: 'Pipeline required' }]}
-                    >
-                      <Select
-                        placeholder="Select pipeline"
-                        options={pipelines.map((p) => ({
-                          label: p.name,
-                          value: p.id,
-                        }))}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'target_ids']}
-                      label="Targets"
-                    >
-                      <Select
-                        mode="multiple"
-                        placeholder="Select targets"
-                        options={targets.map((t) => ({
-                          label: t.name,
-                          value: t.id,
-                        }))}
-                      />
-                    </Form.Item>
-                  </Card>
-                ))}
-                <Button
-                  type="dashed"
-                  block
-                  onClick={() => add()}
-                  icon={<PlusOutlined />}
-                  style={{ marginBottom: 16 }}
-                >
-                  Add Route
-                </Button>
-              </>
-            )}
-          </Form.List>
-
-          <div style={{ marginBottom: 8, fontWeight: 500 }}>
-            Default Route (fallback)
-          </div>
-          <Form.Item name="default_pipeline_id" label="Default Pipeline">
-            <Select
-              allowClear
-              placeholder="Select default pipeline (optional)"
-              options={pipelines.map((p) => ({
-                label: p.name,
-                value: p.id,
-              }))}
-            />
-          </Form.Item>
-          <Form.Item name="default_target_ids" label="Default Targets">
-            <Select
-              mode="multiple"
-              placeholder="Select default targets (optional)"
-              options={targets.map((t) => ({
-                label: t.name,
-                value: t.id,
-              }))}
-            />
           </Form.Item>
         </Form>
       </Modal>

@@ -279,11 +279,32 @@ export interface DefaultRoute {
   target_ids: string[];
 }
 
+export interface WorkflowGraphNode {
+  id: string;
+  type: 'data_source' | 'router' | 'pipeline' | 'target';
+  x: number;
+  y: number;
+  data_source_id?: string;
+  name?: string;
+  priority?: number;
+  file_filter?: FileFilter;
+  is_default?: boolean;
+  pipeline_id?: string;
+  target_id?: string;
+}
+
+export interface WorkflowGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
 export interface Workflow {
   id: string;
   name: string;
   description: string | null;
   status: 'draft' | 'active' | 'archived';
+  graph_data?: { nodes: WorkflowGraphNode[]; edges: WorkflowGraphEdge[] } | null;
   data_source_ids: string[];
   routes: RouteRule[];
   default_route: DefaultRoute | null;

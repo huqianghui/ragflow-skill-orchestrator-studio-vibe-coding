@@ -17,6 +17,7 @@ import Targets from './pages/Targets';
 import PipelineRuns from './pages/PipelineRuns';
 import Settings from './pages/Settings';
 import Workflows from './pages/Workflows';
+import WorkflowEditor from './pages/WorkflowEditor';
 import WorkflowRunHistory from './pages/WorkflowRunHistory';
 import AgentPlayground from './pages/AgentPlayground';
 import AgentHistory from './pages/AgentHistory';
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/targets/new" element={<TargetNew />} />
             <Route path="/targets" element={<Targets />} />
             <Route path="/workflows" element={<Workflows />} />
+            <Route path="/workflows/:id/edit" element={<WorkflowEditor />} />
             <Route path="/workflow-runs" element={<WorkflowRunHistory />} />
             <Route path="/pipeline-runs" element={<PipelineRuns />} />
             <Route path="/playground" element={<AgentPlayground />} />

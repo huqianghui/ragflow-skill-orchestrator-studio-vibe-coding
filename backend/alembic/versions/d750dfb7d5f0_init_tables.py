@@ -110,6 +110,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=20), nullable=False),
+        sa.Column("graph_data", sa.JSON(), nullable=True),
         sa.Column("data_source_ids", sa.JSON(), nullable=False),
         sa.Column("routes", sa.JSON(), nullable=False),
         sa.Column("default_route", sa.JSON(), nullable=True),

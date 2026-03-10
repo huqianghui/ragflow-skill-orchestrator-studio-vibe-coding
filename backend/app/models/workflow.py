@@ -11,6 +11,7 @@ class Workflow(BaseModel):
     description: Mapped[str | None] = mapped_column(Text, default=None)
     # draft | active | archived
     status: Mapped[str] = mapped_column(String(20), default="draft")
+    graph_data: Mapped[dict | None] = mapped_column(JSON, default=None)
     data_source_ids: Mapped[list] = mapped_column(JSON, default=list)
     routes: Mapped[list] = mapped_column(JSON, default=list)
     default_route: Mapped[dict | None] = mapped_column(JSON, default=None)

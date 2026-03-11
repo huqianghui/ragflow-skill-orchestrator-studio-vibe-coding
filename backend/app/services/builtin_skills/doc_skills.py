@@ -2,12 +2,65 @@
 
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 from app.services.builtin_skills.base import BaseBuiltinSkill
 
 # Max time to wait for async analyze operations (seconds)
 _POLL_TIMEOUT = 120
 _POLL_INTERVAL = 2
+
+# Retry config for transient HTTP errors
+_MAX_RETRIES = 3
+_RETRY_BACKOFF = 2  # seconds, doubles each retry
+
+# Transient exceptions that should be retried
+_TRANSIENT_EXCEPTIONS = (
+    ConnectionError,
+    ConnectionResetError,
+    TimeoutError,
+)
+
+
+def _is_transient_httpx_error(exc: Exception) -> bool:
+    """Check if an httpx exception is transient and retryable."""
+    import httpx
+
+    if isinstance(exc, (httpx.ConnectError, httpx.ReadError, httpx.WriteError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+        return True
+    return False
+
+
+def _retry_request(func, *args, **kwargs):
+    """Execute func with retry on transient errors."""
+    last_exc = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            if isinstance(exc, _TRANSIENT_EXCEPTIONS) or _is_transient_httpx_error(exc):
+                last_exc = exc
+                if attempt < _MAX_RETRIES - 1:
+                    time.sleep(_RETRY_BACKOFF * (2**attempt))
+                    continue
+            raise
+    raise last_exc  # type: ignore[misc]
+
+
+def _to_relative_url(absolute_url: str, base_url: str) -> str:
+    """Convert an absolute Operation-Location URL to a relative path.
+
+    Azure returns full URLs like
+    ``https://eastus.api.cognitive.microsoft.com/documentintelligence/...``
+    but httpx Client has a base_url set, so we need the path + query only.
+    """
+    parsed = urlparse(absolute_url)
+    relative = parsed.path
+    if parsed.query:
+        relative += "?" + parsed.query
+    return relative
 
 
 class DocumentCrackerSkill(BaseBuiltinSkill):
@@ -24,16 +77,37 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         # Detect connection type from client to choose backend
         connection_type = data.get("_connection_type", "azure_content_understanding")
 
-        if connection_type == "azure_doc_intelligence":
-            return self._crack_with_doc_intelligence(client, file_content, config)
-        return self._crack_with_content_understanding(client, file_content, config)
+        try:
+            if connection_type == "azure_doc_intelligence":
+                return self._crack_with_doc_intelligence(client, file_content, config)
+            return self._crack_with_content_understanding(client, file_content, config)
+        except TimeoutError as exc:
+            return {
+                "text": "",
+                "metadata": {},
+                "error": f"Azure 分析超时（{_POLL_TIMEOUT}s）: {exc}",
+            }
+        except Exception as exc:
+            if isinstance(exc, _TRANSIENT_EXCEPTIONS) or _is_transient_httpx_error(exc):
+                return {
+                    "text": "",
+                    "metadata": {},
+                    "error": (f"Azure 服务连接异常（已重试 {_MAX_RETRIES} 次）: {exc}"),
+                }
+            raise
 
-    @staticmethod
-    def _poll_operation(client: Any, operation_url: str) -> dict:
+    def _poll_operation(self, client: Any, operation_url: str) -> dict:
         """Poll an async Azure operation until it completes or times out."""
+        # Convert absolute URL to relative path for httpx base_url client
+        base_url = str(client.base_url).rstrip("/")
+        if operation_url.startswith("http"):
+            poll_url = _to_relative_url(operation_url, base_url)
+        else:
+            poll_url = operation_url
+
         deadline = time.monotonic() + _POLL_TIMEOUT
         while time.monotonic() < deadline:
-            resp = client.get(operation_url)
+            resp = _retry_request(client.get, poll_url)
             resp.raise_for_status()
             body = resp.json()
             status = body.get("status", "")
@@ -52,7 +126,8 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         import base64
 
         b64 = base64.b64encode(file_content).decode("utf-8")
-        response = client.post(
+        response = _retry_request(
+            client.post,
             "/contentunderstanding/analyzers/prebuilt-read:analyze",
             params={"api-version": "2024-12-01-preview"},
             json={"base64Source": b64},
@@ -85,7 +160,8 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         import base64
 
         b64 = base64.b64encode(file_content).decode("utf-8")
-        response = client.post(
+        response = _retry_request(
+            client.post,
             "/documentintelligence/documentModels/prebuilt-layout:analyze",
             params={
                 "api-version": "2024-11-30",

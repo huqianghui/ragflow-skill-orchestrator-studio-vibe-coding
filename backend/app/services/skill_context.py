@@ -57,7 +57,7 @@ class ClientFactory:
                 return httpx.Client(
                     base_url=config["endpoint"].rstrip("/"),
                     headers={"Ocp-Apim-Subscription-Key": config["api_key"]},
-                    timeout=60,
+                    timeout=httpx.Timeout(connect=10, read=180, write=120, pool=10),
                 )
 
             case "azure_content_understanding":
@@ -66,7 +66,7 @@ class ClientFactory:
                 return httpx.Client(
                     base_url=config["endpoint"].rstrip("/"),
                     headers={"Ocp-Apim-Subscription-Key": config["api_key"]},
-                    timeout=60,
+                    timeout=httpx.Timeout(connect=10, read=180, write=120, pool=10),
                 )
 
             case "azure_ai_foundry":

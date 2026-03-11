@@ -1,10 +1,13 @@
 """Document processing built-in skill (DocumentCracker)."""
 
+import logging
 import time
 from typing import Any
 from urllib.parse import urlparse
 
 from app.services.builtin_skills.base import BaseBuiltinSkill
+
+logger = logging.getLogger(__name__)
 
 # Max time to wait for async analyze operations (seconds)
 _POLL_TIMEOUT = 120
@@ -69,13 +72,14 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         file_content: bytes | None = data.get("file_content")
 
         if not file_content:
-            # If text is provided directly, pass through
             if "text" in data:
                 return {"text": data["text"], "metadata": {}}
             return {"text": "", "metadata": {}, "error": "No file content provided"}
 
-        # Detect connection type from client to choose backend
         connection_type = data.get("_connection_type", "azure_content_understanding")
+        logger.info(
+            "DocumentCracker: type=%s, file_size=%d bytes", connection_type, len(file_content)
+        )
 
         if connection_type == "azure_doc_intelligence":
             return self._crack_with_doc_intelligence(client, file_content, config)
@@ -111,6 +115,7 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         import base64
 
         b64 = base64.b64encode(file_content).decode("utf-8")
+        logger.info("ContentUnderstanding: sending analyze request (%d bytes)", len(file_content))
         response = _retry_request(
             client.post,
             "/contentunderstanding/analyzers/prebuilt-read:analyze",
@@ -118,13 +123,16 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
             json={"base64Source": b64},
         )
         response.raise_for_status()
+        logger.info("ContentUnderstanding: analyze response status=%d", response.status_code)
 
         # The analyze API is async: 202 with Operation-Location header
         if response.status_code == 202:
             operation_url = response.headers.get("Operation-Location", "")
             if not operation_url:
                 raise RuntimeError("202 response but no Operation-Location header")
+            logger.info("ContentUnderstanding: polling operation")
             result = self._poll_operation(client, operation_url)
+            logger.info("ContentUnderstanding: polling completed successfully")
         else:
             result = response.json()
 
@@ -146,6 +154,7 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         Sends raw bytes via application/octet-stream instead of base64 JSON
         to avoid large payload issues (base64 inflates size by ~33%).
         """
+        logger.info("DocIntelligence: sending analyze request (%d bytes)", len(file_content))
         response = _retry_request(
             client.post,
             "/documentintelligence/documentModels/prebuilt-layout:analyze",
@@ -157,13 +166,16 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
             headers={"Content-Type": "application/octet-stream"},
         )
         response.raise_for_status()
+        logger.info("DocIntelligence: analyze response status=%d", response.status_code)
 
         # The analyze API is async: 202 with Operation-Location header
         if response.status_code == 202:
             operation_url = response.headers.get("Operation-Location", "")
             if not operation_url:
                 raise RuntimeError("202 response but no Operation-Location header")
+            logger.info("DocIntelligence: polling operation %s", operation_url[:100])
             result = self._poll_operation(client, operation_url)
+            logger.info("DocIntelligence: polling completed successfully")
         else:
             result = response.json()
 

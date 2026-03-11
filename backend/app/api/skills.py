@@ -364,6 +364,8 @@ async def _test_builtin_skill(skill: Skill, body: SkillTestRequest, db: AsyncSes
 
     # Resolve connection client
     client = None
+    conn_id = None
+    conn = None
     if skill.required_resource_types:
         conn_id = skill.bound_connection_id
 
@@ -412,12 +414,24 @@ async def _test_builtin_skill(skill: Skill, body: SkillTestRequest, db: AsyncSes
     runner = BuiltinSkillRunner()
     timeout = get_settings().sync_execution_timeout_s
     try:
-        return await asyncio.wait_for(
+        logger.info("Testing builtin skill '%s' (connection: %s)", skill.name, conn_id)
+        result = await asyncio.wait_for(
             asyncio.get_event_loop().run_in_executor(
                 None, runner.execute, skill.name, test_input, config, client
             ),
             timeout=timeout,
         )
+        # Log per-record errors for debugging
+        for v in result.get("values", []):
+            if v.get("errors"):
+                for err in v["errors"]:
+                    logger.error(
+                        "Builtin skill '%s' record '%s' error: %s",
+                        skill.name,
+                        v.get("recordId"),
+                        err.get("message"),
+                    )
+        return result
     except TimeoutError:
         return {
             "values": [],
@@ -425,6 +439,16 @@ async def _test_builtin_skill(skill: Skill, body: SkillTestRequest, db: AsyncSes
             "execution_time_ms": timeout * 1000,
             "error": f"Execution timed out after {timeout}s",
         }
+    except Exception:
+        logger.exception("Unexpected error testing builtin skill '%s'", skill.name)
+        raise
+    finally:
+        # Close httpx.Client to release TCP connections
+        if client is not None and hasattr(client, "close"):
+            try:
+                client.close()
+            except Exception:
+                pass
 
 
 def _resolve_file_ids(test_input: dict) -> dict:

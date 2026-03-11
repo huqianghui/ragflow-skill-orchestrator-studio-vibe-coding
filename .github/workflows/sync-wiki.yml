@@ -1,0 +1,62 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wiki/**'
+      - 'openspec/changes/archive/**'
+      - 'openspec/specs/**'
+      - 'openspec/config.yaml'
+      - 'CLAUDE.md'
+      - 'README.md'
+      - 'backend/app/api/**'
+      - 'backend/app/models/**'
+      - 'backend/tests/**'
+      - 'frontend/src/pages/**'
+      - 'frontend/e2e/**'
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate dynamic wiki pages
+        run: bash .github/scripts/generate-wiki-pages.sh
+
+      - name: Sync to Wiki repo
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_PAT }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+
+          # Clone or init wiki repo
+          if git clone "$WIKI_URL" /tmp/wiki-deploy 2>/dev/null; then
+            echo "Wiki repo cloned"
+          else
+            echo "Wiki not initialized — creating from scratch"
+            mkdir -p /tmp/wiki-deploy
+            cd /tmp/wiki-deploy
+            git init
+            git remote add origin "$WIKI_URL"
+            cd -
+          fi
+
+          # Copy all wiki pages (static + generated)
+          cp wiki/*.md /tmp/wiki-deploy/
+
+          cd /tmp/wiki-deploy
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to push"
+          else
+            git commit -m "auto-sync wiki from main branch"
+            git push origin HEAD:master || git push origin HEAD:main
+          fi

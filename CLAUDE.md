@@ -82,7 +82,7 @@ backend/
     database.py    # 异步引擎 & session 工厂
     main.py        # FastAPI app, lifespan, 路由注册, 后台刷新任务
   alembic/         # 数据库迁移脚本
-  tests/           # pytest 测试 (35 个测试文件)
+  tests/           # pytest 测试 (36 个测试文件)
   data/            # 运行时数据 (app.db, venvs/, uploads/) — 不提交
   pyproject.toml   # 依赖、ruff 配置、pytest 配置
 
@@ -102,7 +102,7 @@ frontend/
     services/      # API 客户端 (axios): api.ts, agentApi.ts
     stores/        # Zustand 状态管理: themeStore.ts
     utils/         # 工具函数: time.ts (UTC 时间处理)
-    types/         # TypeScript 类型定义: index.ts, agent.ts
+    types/         # TypeScript 类型定义: index.ts, agent.ts, react-grid-layout.d.ts
   e2e/             # Playwright E2E 测试 (11 个 spec 文件):
                    #   agent-playground, agent-history-table, agent-session-restore,
                    #   agent-chat-ui, editor-layout, workflows, workflow-editor,
@@ -248,6 +248,7 @@ GitHub Actions 在 push/PR 到 `main` 时运行:
 | `ci.yml` | `frontend-test` | `npm ci` → `npx tsc -b` → `npm run build` |
 | `ci.yml` | `deploy` | 构建 Docker → 推送 ACR → 部署 Azure Container Apps |
 | `sync-wiki.yml` | `sync-wiki` | 生成动态统计 → 同步 wiki 到 GitHub Wiki |
+| `sync-openspec-project.yml` | `sync` | 同步 openspec 项目配置 |
 
 ---
 

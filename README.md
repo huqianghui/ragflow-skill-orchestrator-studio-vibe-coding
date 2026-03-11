@@ -30,12 +30,12 @@ AI Agent 驱动的智能编排工作室，用于构建数据摄取管道（Data 
 | **Skills** | Skill 管理 — 16 个内置 + 3 种自定义 (Web API / 配置模板 / Python 代码) | CRUD、内置 Skill 自动播种、Python Code 执行引擎（隔离 venv）、内置 Skill 执行引擎（Azure AI Language/Vision/OpenAI）、Document Intelligence Studio、Connection 绑定、在线测试 |
 | **Connections** | 外部服务认证凭据管理（Azure OpenAI / AI Foundry / Doc Intelligence 等） | CRUD、AES 加密存储、API 响应脱敏、连通性测试、Default Connection |
 | **Pipelines** | Pipeline 有序 Skill 节点编排 | CRUD、节点管理（添加/删除/拖拽排序）、Enrichment Tree 数据结构、Pipeline Runner 执行引擎、Debug 模式（3 列调试布局）、5 个预置模板 |
-| **Data Sources** | 16 种数据源类型（Local / Azure / AWS / Logic Apps 等） | CRUD、本地文件上传（配额管理）、连通性测试、Secret 掩码、过期清理 |
+| **Data Sources** | 16 种数据源类型（Local / Azure / SharePoint / OneDrive / S3 / SFTP 等） | CRUD、本地文件上传（配额管理）、连通性测试、Secret 掩码、过期清理 |
 | **Targets** | 6 种输出目标（AI Search / Blob / CosmosDB / Neo4j / MySQL / PostgreSQL） | CRUD、连通性测试、Schema 发现、索引管理、字段映射引擎（含图数据映射）、Writer 服务 |
 | **Workflows** | DataSource → Pipeline → Target 编排层 | CRUD、路由规则（按扩展名/MIME/大小/路径模式匹配文件到 Pipeline）、Default Route 兜底、WorkflowRun + PipelineRun 执行引擎、增量处理（etag 检测跳过已处理文件）、Workflow Runs 历史页、React Flow 可视化流程编辑器（拖拽式路由拓扑画布） |
 | **Runs** | Pipeline 执行记录管理 | CRUD、统一 Pipeline Runs 视图（合并 standalone + workflow 来源） |
 | **Dashboard** | 仪表板聚合统计 | 资源计数、Skill 分类统计、Agent 可用性统计、WorkflowRun 成功率、最近 5 次执行记录 |
-| **Agents** | CLI Coding Agent 集成 | 25+ 社区 Agent 注册发现、Session 管理（自动恢复近期会话）、WebSocket 实时聊天（消息持久化）、配置文件读取（敏感值脱敏）、Playground 交互式对话、Agent History（Session ID 显示 + Detail Modal 预览 + 搜索/过滤/排序/分页）、Thinking 等待动画 |
+| **Agents** | CLI Coding Agent 集成 | 3 个 CLI Agent adapter（Claude Code / Codex / Copilot）、Session 管理（自动恢复近期会话）、WebSocket 实时聊天（消息持久化）、配置文件读取（敏感值脱敏）、Playground 交互式对话、Agent History（Session ID 显示 + Detail Modal 预览 + 搜索/过滤/排序/分页）、Thinking 等待动画 |
 | **System** | 全局功能 | 健康检查、配置管理、CORS、临时文件定期清理 |
 
 ## 快速开始
@@ -221,7 +221,7 @@ npm run dev
 
 | 层 | 技术 |
 |----|------|
-| Backend | Python 3.12, FastAPI >= 0.110, SQLAlchemy 2.0 (async), aiosqlite, Pydantic v2, Alembic |
+| Backend | Python >=3.11, FastAPI >= 0.110, SQLAlchemy 2.0 (async), aiosqlite, Pydantic v2, Alembic |
 | Frontend | React 19, TypeScript 5.9, Vite 7, Ant Design 6, Monaco Editor, Zustand, Axios |
 | Lint/Test | ruff (lint + format), pytest, tsc -b |
 | DevOps | Docker Compose, GitHub Actions CI/CD, Azure Container Apps (OIDC 零密钥) |

@@ -350,7 +350,10 @@ async def test_skill(
 
     context = await _build_context(skill.connection_mappings, skill.config_schema, db)
     runner = SkillRunner()
-    return await _run_with_timeout(runner, skill.source_code, body.test_input, context)
+    try:
+        return await _run_with_timeout(runner, skill.source_code, body.test_input, context)
+    finally:
+        context.close()
 
 
 async def _test_builtin_skill(skill: Skill, body: SkillTestRequest, db: AsyncSession):
@@ -474,4 +477,7 @@ async def test_skill_code(
     """Test unsaved Python skill code with sample input."""
     context = await _build_context(body.connection_mappings, {}, db)
     runner = SkillRunner()
-    return await _run_with_timeout(runner, body.source_code, body.test_input, context)
+    try:
+        return await _run_with_timeout(runner, body.source_code, body.test_input, context)
+    finally:
+        context.close()

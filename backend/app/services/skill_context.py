@@ -126,3 +126,13 @@ class SkillContext:
             decrypted = decrypt_config(conn_info["config"], secret_fields)
             self._clients[name] = ClientFactory.create(conn_info["connection_type"], decrypted)
         return self._clients[name]
+
+    def close(self) -> None:
+        """Close all cached SDK clients to release resources."""
+        for client in self._clients.values():
+            if hasattr(client, "close"):
+                try:
+                    client.close()
+                except Exception:
+                    pass
+        self._clients.clear()

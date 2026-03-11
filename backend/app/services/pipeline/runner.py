@@ -118,36 +118,44 @@ class PipelineRunner:
             if client and skill.required_resource_types:
                 conn_type = skill.required_resource_types[0]
 
-            for instance_path in instance_paths:
-                # Resolve input values from tree
-                data: dict[str, Any] = {}
-                for inp in inputs_def:
-                    source = tree.resolve_source(inp["source"], context_path, instance_path)
+            try:
+                for instance_path in instance_paths:
+                    # Resolve input values from tree
+                    data: dict[str, Any] = {}
+                    for inp in inputs_def:
+                        source = tree.resolve_source(inp["source"], context_path, instance_path)
+                        try:
+                            data[inp["name"]] = tree.get(source)
+                        except KeyError:
+                            warnings.append(f"Input '{inp['name']}' source '{source}' not found")
+
+                    if conn_type:
+                        data["_connection_type"] = conn_type
+
+                    input_snapshots.append(_truncate_snapshot(data))
+
+                    # Execute skill
+                    impl = SKILL_REGISTRY[skill_name]()
+                    output = impl.execute(data, config, client)
+                    if not isinstance(output, dict):
+                        output = {"result": output}
+
+                    output_snapshots.append(_truncate_snapshot(output))
+
+                    # Write outputs to tree
+                    for out in outputs_def:
+                        out_name = out["name"]
+                        target_name = out.get("targetName", out_name)
+                        if out_name in output:
+                            target_path = f"{instance_path}/{target_name}"
+                            tree.set(target_path, output[out_name])
+            finally:
+                # Close httpx.Client to release TCP connections
+                if client is not None and hasattr(client, "close"):
                     try:
-                        data[inp["name"]] = tree.get(source)
-                    except KeyError:
-                        warnings.append(f"Input '{inp['name']}' source '{source}' not found")
-
-                if conn_type:
-                    data["_connection_type"] = conn_type
-
-                input_snapshots.append(_truncate_snapshot(data))
-
-                # Execute skill
-                impl = SKILL_REGISTRY[skill_name]()
-                output = impl.execute(data, config, client)
-                if not isinstance(output, dict):
-                    output = {"result": output}
-
-                output_snapshots.append(_truncate_snapshot(output))
-
-                # Write outputs to tree
-                for out in outputs_def:
-                    out_name = out["name"]
-                    target_name = out.get("targetName", out_name)
-                    if out_name in output:
-                        target_path = f"{instance_path}/{target_name}"
-                        tree.set(target_path, output[out_name])
+                        client.close()
+                    except Exception:
+                        pass
 
         except Exception as exc:
             errors.append(

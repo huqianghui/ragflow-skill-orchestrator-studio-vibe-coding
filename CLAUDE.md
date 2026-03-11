@@ -176,6 +176,32 @@ npm run build             # 完整 Vite 构建
 - **UI 框架**: Ant Design (`antd`) 全部 UI 元素
 - **严格模式**: TypeScript strict 已开启
 
+### 资源生命周期管理 (CRITICAL)
+
+外部连接（HTTP client、DB session、file handle）**必须确保关闭**，防止泄露导致连接耗尽、性能劣化或间歇性故障。
+
+- **httpx.Client**: 用 `with` 上下文管理器，或在 `try/finally` 中调用 `client.close()`
+  ```python
+  # ✅ 推荐: context manager
+  with httpx.Client(base_url=url, headers=headers) as client:
+      resp = client.post("/api", content=data)
+
+  # ✅ 可接受: try/finally (当 client 需要跨函数传递时)
+  client = httpx.Client(...)
+  try:
+      result = do_work(client)
+  finally:
+      client.close()
+
+  # ❌ 禁止: 裸创建不关闭
+  client = httpx.Client(...)
+  result = do_work(client)  # client 泄露!
+  ```
+- **数据库连接**: 必须走 `async with AsyncSession()` 或 FastAPI `Depends(get_db)` 自动管理
+- **文件句柄**: 必须用 `with open(...)` 或 `Path.read_bytes()` / `Path.write_bytes()`
+- **subprocess**: 必须设置 `timeout` 参数，防止子进程挂起
+- **审查要点**: Code Review 时遇到 `httpx.Client()`、`open()`、`connect()` 等调用，必须确认有对应的关闭逻辑
+
 ### 多语言 / i18n (CRITICAL)
 
 平台必须支持中文、日文、韩文等非 ASCII 内容。
@@ -238,6 +264,8 @@ GitHub Actions 在 push/PR 到 `main` 时运行:
 | 7 | 前端 ECONNREFUSED | 后端没启动，不是代码问题 |
 | 8 | WebSocket handler DB | Agent WS 用 `AsyncSessionLocal()`（不走 Depends），测试 mock `session_proxy` |
 | 9 | UTC 时间偏移 | 后端 SQLite `func.now()` 返回 UTC 无 Z 后缀，前端解析前需追加 `Z` |
+| 10 | httpx.Client 不关闭 | TCP 连接泄露导致第二次请求间歇性失败，必须 `with` 或 `try/finally` 关闭 |
+| 11 | axios 30s 全局超时 | 长耗时 API（Skill 测试、Pipeline Debug）需显式设 `{ timeout: 300000 }`，否则前端默认 30s 放弃 |
 
 ---
 

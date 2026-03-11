@@ -234,6 +234,7 @@ npm run dev
 | `openspec/config.yaml` | 所有人 | 技术栈决策、spec 索引 |
 | `openspec/specs/` | 开发者 | 22 个模块的系统行为规格（GIVEN/WHEN/THEN） |
 | `openspec/changes/archive/` | 开发者 | 37 个已归档的变更（proposal → design → tasks） |
+| [GitHub Wiki](../../wiki) | 所有人 | 架构图、模块索引、变更时间线、路线图、新人指南 |
 
 ## 关键设计决策
 

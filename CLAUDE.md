@@ -60,8 +60,8 @@ backend/
     api/           # FastAPI 路由 (12 模块): health, skills, connections, pipelines,
                    #   runs, pipeline_runs, targets, data_sources, workflows,
                    #   workflow_runs, dashboard, agents
-    models/        # SQLAlchemy ORM (13 模型): connection, skill, pipeline, run,
-                   #   data_source, target, workflow, workflow_run, pipeline_run,
+    models/        # SQLAlchemy ORM (12 模型): connection, skill, pipeline, run,
+                   #   data_source, target, workflow, workflow_run,
                    #   processed_file, agent_session, agent_config, agent_message
     schemas/       # Pydantic 请求/响应 schema (12 模块):
                    #   skill, connection, pipeline, run, pipeline_runs, data_source,
@@ -76,7 +76,7 @@ backend/
                    #   pipeline/ (enrichment_tree, runner)
                    #   agents/ (base, registry, session_proxy, context_builder,
                    #            adapters/: claude_code, codex, copilot)
-    utils/         # 工具类 (encryption, exceptions, pagination, time)
+    utils/         # 工具类 (encryption, exceptions, pagination)
     data/          # 内置数据定义 (builtin_skills, pipeline_templates, pipeline_defaults)
     config.py      # pydantic-settings 配置
     database.py    # 异步引擎 & session 工厂
@@ -214,13 +214,14 @@ DB 包含用户手动创建的 connections、skills、pipelines。已在 `.gitig
 
 ## 8. CI Pipeline
 
-GitHub Actions 在 push/PR 到 `main` 时运行 (`.github/workflows/ci.yml`):
+GitHub Actions 在 push/PR 到 `main` 时运行:
 
-| Job | 步骤 |
-|-----|------|
-| `backend-test` | `ruff check .` → `ruff format --check .` → `pytest -v` |
-| `frontend-test` | `npm ci` → `npx tsc -b` → `npm run build` |
-| `deploy` | 构建 Docker → 推送 ACR → 部署 Azure Container Apps |
+| Workflow | Job | 步骤 |
+|----------|-----|------|
+| `ci.yml` | `backend-test` | `ruff check .` → `ruff format --check .` → `pytest -v` |
+| `ci.yml` | `frontend-test` | `npm ci` → `npx tsc -b` → `npm run build` |
+| `ci.yml` | `deploy` | 构建 Docker → 推送 ACR → 部署 Azure Container Apps |
+| `sync-wiki.yml` | `sync-wiki` | 生成动态统计 → 同步 wiki 到 GitHub Wiki |
 
 ---
 

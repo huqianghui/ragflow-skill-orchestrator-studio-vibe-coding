@@ -254,8 +254,8 @@ class TestDocIntelligence:
                 client,
             )
 
-    def test_poll_timeout_returns_error(self):
-        """Polling times out — returns friendly error instead of crash."""
+    def test_poll_timeout_raises(self):
+        """Polling times out — raises TimeoutError for runner to capture."""
         client = _make_mock_client()
         client.post.return_value = _make_response(
             202,
@@ -266,17 +266,15 @@ class TestDocIntelligence:
         skill = DocumentCrackerSkill()
         with patch("app.services.builtin_skills.doc_skills._POLL_TIMEOUT", 0):
             with patch("app.services.builtin_skills.doc_skills.time.sleep"):
-                result = skill.execute(
-                    {
-                        "file_content": b"big-pdf",
-                        "_connection_type": "azure_doc_intelligence",
-                    },
-                    {},
-                    client,
-                )
-
-        assert result["text"] == ""
-        assert "超时" in result["error"]
+                with pytest.raises(TimeoutError, match="did not complete"):
+                    skill.execute(
+                        {
+                            "file_content": b"big-pdf",
+                            "_connection_type": "azure_doc_intelligence",
+                        },
+                        {},
+                        client,
+                    )
 
     def test_tables_html_generation(self):
         """Verify table HTML is correctly generated from cells."""
@@ -423,6 +421,29 @@ class TestConnectionTypeRouting:
         assert "/documentintelligence/" in call_url
         assert "prebuilt-layout" in call_url
 
+    def test_doc_intelligence_uses_octet_stream(self):
+        """Doc Intelligence sends raw bytes, not base64 JSON."""
+        client = _make_mock_client()
+        client.post.return_value = _make_response(
+            200,
+            json_data={
+                "analyzeResult": {"content": "text", "pages": [], "tables": [], "figures": []}
+            },
+        )
+
+        skill = DocumentCrackerSkill()
+        skill.execute(
+            {"file_content": b"raw-pdf-bytes", "_connection_type": "azure_doc_intelligence"},
+            {},
+            client,
+        )
+
+        call_kwargs = client.post.call_args[1]
+        # Should use content= (raw bytes), not json= (base64)
+        assert call_kwargs.get("content") == b"raw-pdf-bytes"
+        assert "json" not in call_kwargs
+        assert call_kwargs["headers"]["Content-Type"] == "application/octet-stream"
+
 
 # ---------------------------------------------------------------------------
 # DocumentCrackerSkill — network error handling
@@ -430,38 +451,36 @@ class TestConnectionTypeRouting:
 
 
 class TestNetworkErrorHandling:
-    def test_connection_reset_returns_friendly_error(self):
-        """Connection reset after retries returns user-friendly error."""
+    def test_connection_reset_raises_after_retries(self):
+        """Connection reset propagates after retries so runner can capture it."""
         client = _make_mock_client()
         client.post.side_effect = ConnectionResetError("[Errno 54] Connection reset by peer")
 
         skill = DocumentCrackerSkill()
         with patch("app.services.builtin_skills.doc_skills.time.sleep"):
-            result = skill.execute(
-                {"file_content": b"pdf", "_connection_type": "azure_doc_intelligence"},
-                {},
-                client,
-            )
+            with pytest.raises(ConnectionResetError, match="Connection reset"):
+                skill.execute(
+                    {"file_content": b"pdf", "_connection_type": "azure_doc_intelligence"},
+                    {},
+                    client,
+                )
+        # Retried 3 times
+        assert client.post.call_count == 3
 
-        assert result["text"] == ""
-        assert "连接异常" in result["error"]
-        assert "重试" in result["error"]
-
-    def test_connection_error_returns_friendly_error(self):
-        """Generic ConnectionError after retries returns friendly error."""
+    def test_connection_error_raises_after_retries(self):
+        """Generic ConnectionError propagates after retries."""
         client = _make_mock_client()
         client.post.side_effect = ConnectionError("Network unreachable")
 
         skill = DocumentCrackerSkill()
         with patch("app.services.builtin_skills.doc_skills.time.sleep"):
-            result = skill.execute(
-                {"file_content": b"pdf", "_connection_type": "azure_doc_intelligence"},
-                {},
-                client,
-            )
-
-        assert result["text"] == ""
-        assert "连接异常" in result["error"]
+            with pytest.raises(ConnectionError, match="Network unreachable"):
+                skill.execute(
+                    {"file_content": b"pdf", "_connection_type": "azure_doc_intelligence"},
+                    {},
+                    client,
+                )
+        assert client.post.call_count == 3
 
 
 # ---------------------------------------------------------------------------
@@ -509,7 +528,7 @@ class TestRunnerIntegration:
         assert "execution_time_ms" in result
 
     def test_runner_captures_network_error_per_record(self):
-        """Runner captures connection errors as record-level errors."""
+        """Runner captures connection errors in the errors list with traceback."""
         client = _make_mock_client()
         client.post.side_effect = ConnectionResetError("reset")
 
@@ -533,9 +552,10 @@ class TestRunnerIntegration:
             )
 
         rec = result["values"][0]
-        # The friendly error should be in data (not in errors list)
-        # because execute() catches transient errors and returns error dict
-        assert rec["data"].get("error") or rec["errors"]
+        # Error should be in the errors list (not swallowed in data)
+        assert len(rec["errors"]) > 0
+        assert "reset" in rec["errors"][0]["message"]
+        assert "traceback" in rec["errors"][0]
 
 
 # ---------------------------------------------------------------------------

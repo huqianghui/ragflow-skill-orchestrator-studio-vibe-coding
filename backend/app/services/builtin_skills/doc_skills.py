@@ -77,24 +77,9 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         # Detect connection type from client to choose backend
         connection_type = data.get("_connection_type", "azure_content_understanding")
 
-        try:
-            if connection_type == "azure_doc_intelligence":
-                return self._crack_with_doc_intelligence(client, file_content, config)
-            return self._crack_with_content_understanding(client, file_content, config)
-        except TimeoutError as exc:
-            return {
-                "text": "",
-                "metadata": {},
-                "error": f"Azure 分析超时（{_POLL_TIMEOUT}s）: {exc}",
-            }
-        except Exception as exc:
-            if isinstance(exc, _TRANSIENT_EXCEPTIONS) or _is_transient_httpx_error(exc):
-                return {
-                    "text": "",
-                    "metadata": {},
-                    "error": (f"Azure 服务连接异常（已重试 {_MAX_RETRIES} 次）: {exc}"),
-                }
-            raise
+        if connection_type == "azure_doc_intelligence":
+            return self._crack_with_doc_intelligence(client, file_content, config)
+        return self._crack_with_content_understanding(client, file_content, config)
 
     def _poll_operation(self, client: Any, operation_url: str) -> dict:
         """Poll an async Azure operation until it completes or times out."""
@@ -156,10 +141,11 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
         }
 
     def _crack_with_doc_intelligence(self, client: Any, file_content: bytes, config: dict) -> dict:
-        """Use Azure Document Intelligence to analyze document."""
-        import base64
+        """Use Azure Document Intelligence to analyze document.
 
-        b64 = base64.b64encode(file_content).decode("utf-8")
+        Sends raw bytes via application/octet-stream instead of base64 JSON
+        to avoid large payload issues (base64 inflates size by ~33%).
+        """
         response = _retry_request(
             client.post,
             "/documentintelligence/documentModels/prebuilt-layout:analyze",
@@ -167,7 +153,8 @@ class DocumentCrackerSkill(BaseBuiltinSkill):
                 "api-version": "2024-11-30",
                 "outputContentFormat": "markdown",
             },
-            json={"base64Source": b64},
+            content=file_content,
+            headers={"Content-Type": "application/octet-stream"},
         )
         response.raise_for_status()
 

@@ -58,5 +58,10 @@ jobs:
             echo "No wiki changes to push"
           else
             git commit -m "auto-sync wiki from main branch"
-            git push origin HEAD:master || git push origin HEAD:main
+            if git push origin HEAD:master 2>/dev/null || git push origin HEAD:main 2>/dev/null; then
+              echo "Wiki synced successfully"
+            else
+              echo "::warning::Wiki push failed — initialize wiki at GitHub Web UI first"
+              echo "Visit: https://github.com/${{ github.repository }}/wiki/_new"
+            fi
           fi

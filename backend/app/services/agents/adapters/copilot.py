@@ -93,7 +93,7 @@ class CopilotAdapter(BaseAgentAdapter):
             yield AgentEvent(type="error", content="Copilot CLI not found.")
             return
 
-        async for event in _stream_subprocess(cmd):
+        async for event in _stream_subprocess(cmd, extra_env=self.get_subprocess_env()):
             parsed = _parse_copilot_event(event)
             if parsed is None:
                 continue

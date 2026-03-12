@@ -12,6 +12,7 @@ from app.services.agents.base import (
     _check_command,
     _get_command_output,
     _read_toml_config,
+    _read_toml_config_raw,
     _stream_subprocess,
 )
 
@@ -62,9 +63,21 @@ class CodexAdapter(BaseAgentAdapter):
                     break
         return config
 
+    def get_subprocess_env(self) -> dict[str, str]:
+        """Inject env vars from ~/.codex/config.toml into subprocess.
+
+        Reads the ``env`` section to ensure OPENAI_API_KEY or similar
+        auth tokens are available to the subprocess.
+        """
+        raw = _read_toml_config_raw("~/.codex/config.toml")
+        env_section = raw.get("env", {})
+        if isinstance(env_section, dict):
+            return {k: str(v) for k, v in env_section.items() if v is not None}
+        return {}
+
     async def execute(self, request: AgentRequest) -> AsyncGenerator[AgentEvent, None]:
         cmd = ["codex", "exec", request.prompt, "--json"]
-        async for event in _stream_subprocess(cmd):
+        async for event in _stream_subprocess(cmd, extra_env=self.get_subprocess_env()):
             parsed = _parse_codex_event(event)
             if parsed is None:
                 continue

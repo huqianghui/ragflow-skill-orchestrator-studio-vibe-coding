@@ -165,6 +165,15 @@ class BaseAgentAdapter(ABC):
         """
         return {}
 
+    def get_subprocess_env(self) -> dict[str, str]:
+        """Return extra env vars to inject into the agent subprocess.
+
+        Override in subclass to read CLI-specific config files and return
+        env vars (e.g. API keys, base URLs) that ensure the subprocess
+        can authenticate without requiring interactive ``login``.
+        """
+        return {}
+
     @abstractmethod
     async def execute(self, request: AgentRequest) -> AsyncGenerator[AgentEvent, None]:
         """Stream-execute the agent, yielding AgentEvent objects."""
@@ -204,6 +213,7 @@ async def _stream_subprocess(
     cmd: list[str],
     cwd: str | None = None,
     timeout: float = 300,
+    extra_env: dict[str, str] | None = None,
 ) -> AsyncGenerator[AgentEvent, None]:
     """Launch a subprocess and stream AgentEvent from stdout.
 
@@ -211,11 +221,15 @@ async def _stream_subprocess(
     - stderr=PIPE to capture error messages on failure
     - stderr is drained in a background task to avoid deadlock
     - timeout via asyncio deadline
+    - extra_env: additional env vars (e.g. from CLI config files) merged
+      into the subprocess environment, overriding os.environ values
     """
     # Strip env vars that prevent nested CLI agent sessions (e.g. CLAUDECODE)
     clean_env = {
         k: v for k, v in os.environ.items() if k not in ("CLAUDECODE", "CLAUDE_CODE_SESSION")
     }
+    if extra_env:
+        clean_env.update(extra_env)
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdin=asyncio.subprocess.DEVNULL,
@@ -336,6 +350,23 @@ def _read_json_config(path: str | Path) -> dict:
         return {}
 
 
+def _read_json_config_raw(path: str | Path) -> dict:
+    """Read a JSON config file and return its contents **without masking**.
+
+    Used internally to extract real env vars for subprocess injection.
+    Never expose the return value in API responses.
+    """
+    try:
+        p = Path(path).expanduser()
+        if not p.is_file():
+            return {}
+        raw = json.loads(p.read_text(encoding="utf-8"))
+        return raw if isinstance(raw, dict) else {}
+    except Exception:
+        logger.debug("Failed to read raw JSON config %s", path, exc_info=True)
+        return {}
+
+
 def _read_toml_config(path: str | Path) -> dict:
     """Read a TOML config file and return its contents with secrets masked."""
     try:
@@ -355,4 +386,27 @@ def _read_toml_config(path: str | Path) -> dict:
         return {"data": raw}
     except Exception:
         logger.debug("Failed to read TOML config %s", path, exc_info=True)
+        return {}
+
+
+def _read_toml_config_raw(path: str | Path) -> dict:
+    """Read a TOML config file **without masking**.
+
+    Used internally to extract real env vars for subprocess injection.
+    """
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        try:
+            import tomli as tomllib  # type: ignore[no-redef]
+        except ModuleNotFoundError:
+            return {}
+    try:
+        p = Path(path).expanduser()
+        if not p.is_file():
+            return {}
+        raw = tomllib.loads(p.read_text(encoding="utf-8"))
+        return raw if isinstance(raw, dict) else {}
+    except Exception:
+        logger.debug("Failed to read raw TOML config %s", path, exc_info=True)
         return {}

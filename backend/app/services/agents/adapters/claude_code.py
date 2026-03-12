@@ -13,6 +13,7 @@ from app.services.agents.base import (
     _check_command,
     _get_command_output,
     _read_json_config,
+    _read_json_config_raw,
     _stream_subprocess,
 )
 
@@ -74,6 +75,19 @@ class ClaudeCodeAdapter(BaseAgentAdapter):
             self.model = str(env["ANTHROPIC_MODEL"])
         return config
 
+    def get_subprocess_env(self) -> dict[str, str]:
+        """Inject env vars from ~/.claude/settings.json into subprocess.
+
+        This ensures ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL, etc. are
+        available even when ``claude login`` session has expired, preventing
+        the "Not logged in · Please run /login" error.
+        """
+        raw = _read_json_config_raw("~/.claude/settings.json")
+        env_section = raw.get("env", {})
+        if isinstance(env_section, dict):
+            return {k: str(v) for k, v in env_section.items() if v is not None}
+        return {}
+
     async def get_mcp_servers(self) -> list[str]:
         """Detect configured MCP servers via `claude mcp list`."""
         try:
@@ -112,7 +126,7 @@ class ClaudeCodeAdapter(BaseAgentAdapter):
         if request.session_id:
             cmd.extend(["--resume", request.session_id])
 
-        async for event in _stream_subprocess(cmd):
+        async for event in _stream_subprocess(cmd, extra_env=self.get_subprocess_env()):
             meta = event.metadata
             event_type = meta.get("type", "")
 

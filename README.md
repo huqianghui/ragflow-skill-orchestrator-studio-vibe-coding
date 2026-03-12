@@ -35,7 +35,7 @@ AI Agent 驱动的智能编排工作室，用于构建数据摄取管道（Data 
 | **Workflows** | DataSource → Pipeline → Target 编排层 | CRUD、路由规则（按扩展名/MIME/大小/路径模式匹配文件到 Pipeline）、Default Route 兜底、WorkflowRun + PipelineRun 执行引擎、增量处理（etag 检测跳过已处理文件）、Workflow Runs 历史页、React Flow 可视化流程编辑器（拖拽式路由拓扑画布） |
 | **Runs** | Pipeline 执行记录管理 | CRUD、统一 Pipeline Runs 视图（合并 standalone + workflow 来源） |
 | **Dashboard** | 仪表板聚合统计 | 资源计数、Skill 分类统计、Agent 可用性统计、WorkflowRun 成功率、最近 5 次执行记录 |
-| **Agents** | CLI Coding Agent 集成 | 3 个 CLI Agent adapter（Claude Code / Codex / Copilot）、Session 管理（自动恢复近期会话）、WebSocket 实时聊天（消息持久化）、配置文件读取（敏感值脱敏）、Playground 交互式对话、Agent History（Session ID 显示 + Detail Modal 预览 + 搜索/过滤/排序/分页）、Thinking 等待动画 |
+| **Agents** | CLI Coding Agent 集成 | 3 个 CLI Agent adapter（Claude Code / Codex / Copilot）、Session 管理（自动恢复近期会话）、WebSocket 实时聊天（消息持久化）、配置文件 env 自动注入（防止 CLI "Not logged in"）、流式消息队列（streaming 中继续输入 + 方向键导航）、120s 流式安全超时、Playground 交互式对话、Agent History（Session ID 显示 + Detail Modal 预览 + 搜索/过滤/排序/分页）、Thinking 等待动画 |
 | **System** | 全局功能 | 健康检查、配置管理、CORS、临时文件定期清理 |
 
 ## 快速开始

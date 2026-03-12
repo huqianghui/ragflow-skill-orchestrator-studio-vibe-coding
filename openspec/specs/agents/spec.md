@@ -205,6 +205,7 @@ Session 不存在时返回 404。
 - `get_config()` → 读取配置文件
 - `get_tools()` → 获取内置工具列表
 - `get_mcp_servers()` → 获取 MCP 服务器列表
+- `get_subprocess_env()` → 返回注入子进程的 env vars（API key 等认证信息）
 
 ### 当前 Adapter 实现
 
@@ -212,7 +213,7 @@ Session 不存在时返回 404。
 |---------|---------|---------|---------|
 | claude_code | `claude` | `~/.claude/settings.json` | `claude --print --output-format stream-json` |
 | codex | `codex` | `~/.codex/config.toml` | `codex exec --json` |
-| copilot | `gh copilot` | — | `gh copilot` (stub, 非交互模式尚未实现) |
+| copilot | `copilot` / `gh copilot` | — | `copilot -p <prompt> --output-format json --allow-all-tools` |
 
 #### Scenario: Codex adapter 使用 exec 子命令执行
 
@@ -232,10 +233,18 @@ Session 不存在时返回 404。
 - **THEN** 检查 `gh` 命令是否存在于 PATH
 - **AND** 执行 `gh copilot --version` 验证扩展已安装
 
-#### Scenario: Copilot adapter 执行返回 stub 错误
+#### Scenario: Copilot adapter 执行流式输出
 
 - **WHEN** Copilot adapter 收到执行请求
-- **THEN** 返回 AgentEvent(type="error") 说明非交互模式尚未实现
+- **AND** 本机安装了 standalone `copilot` CLI
+- **THEN** 使用 `copilot -p <prompt> --output-format json --allow-all-tools` 执行
+- **AND** 解析 JSON 事件流（`assistant.message_delta` → text, `result` → session_id）
+- **AND** 支持 `--resume <id>` 恢复已有会话
+
+#### Scenario: Copilot gh-extension fallback 报错
+
+- **WHEN** Copilot adapter 检测到仅安装了 `gh copilot` 扩展（无 standalone CLI）
+- **THEN** 返回 AgentEvent(type="error") 说明 gh-extension 不支持非交互模式
 
 ### 执行隔离
 
@@ -244,6 +253,16 @@ Session 不存在时返回 404。
 - stderr 后台 drain 防止 buffer 死锁
 - 300s 超时保护
 - 环境变量清理: 剔除 `CLAUDECODE`/`CLAUDE_CODE_SESSION` 防止嵌套
+- `extra_env` 参数: adapter 通过 `get_subprocess_env()` 读取 CLI 配置文件中的 env 段（API key、base URL 等），注入子进程环境变量，解决 CLI "Not logged in" 问题
+
+#### Scenario: 子进程继承 adapter env vars
+
+- **WHEN** adapter 执行 CLI 子进程
+- **THEN** 调用 `get_subprocess_env()` 获取 env vars
+- **AND** 将 env vars 合并到子进程环境（覆盖同名变量）
+- **AND** Claude Code 从 `~/.claude/settings.json` 的 `env` 段读取
+- **AND** Codex 从 `~/.codex/config.toml` 的 `[env]` 段读取
+- **AND** Copilot 使用空 env（无配置文件）
 
 ## 6. Context Builder
 
@@ -270,6 +289,52 @@ Session 不存在时返回 404。
 | ContextPanel | components/agent/ | 嵌入模式下的上下文面板 |
 | AgentDetailPanel | components/agent/ | Agent 详情信息面板 |
 | ApplyActions | components/agent/ | 代码应用操作按钮 |
+
+### 流式安全机制
+
+AgentChatWidget 通过双重保护确保 streaming 状态始终能正确重置：
+
+#### Scenario: WebSocket 关闭时重置 streaming
+
+- **WHEN** WebSocket 连接关闭（服务端断开或重连耗尽）
+- **AND** 当前处于 streaming 状态
+- **THEN** 自动调用 `resetStreaming()` 清理所有流式状态
+- **AND** TextArea 恢复可输入
+
+#### Scenario: 流式超时 watchdog
+
+- **WHEN** streaming 开始后 120 秒内无任何数据块到达
+- **THEN** watchdog timer 触发，自动重置 streaming 状态
+- **AND** 显示 "Agent response timed out" 提示
+- **AND** 每次收到数据块时重置 watchdog 计时
+
+### 消息队列
+
+用户在 streaming 期间可继续输入消息，排队等待依次发送。
+
+#### Scenario: 流式响应中输入新消息
+
+- **WHEN** agent 正在流式响应（streaming=true）
+- **AND** 用户输入文本并按 Enter / 点击发送
+- **THEN** 消息加入发送队列（不立即发送）
+- **AND** 发送按钮文本变为 "Queue"
+- **AND** 输入框 placeholder 变为 "Type to queue next message..."
+- **AND** 队列区域显示已排队的消息 Tag（可点击 X 移除）
+
+#### Scenario: 流式结束后自动发送队列
+
+- **WHEN** 当前流式响应完成（streaming→false）
+- **AND** 消息队列非空
+- **THEN** 自动取出队首消息发送给 agent
+- **AND** 队列中剩余消息继续等待
+
+#### Scenario: 方向键导航队列消息
+
+- **WHEN** 消息队列非空且光标在输入框开头
+- **AND** 用户按 ArrowUp
+- **THEN** 输入框显示队列中最近一条消息内容（可编辑/重发）
+- **WHEN** 用户按 ArrowDown
+- **THEN** 向较新的队列消息导航，或清空输入框
 
 ### 嵌入模式
 

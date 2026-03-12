@@ -60,8 +60,8 @@ backend/
     api/           # FastAPI 路由 (12 模块): health, skills, connections, pipelines,
                    #   runs, pipeline_runs, targets, data_sources, workflows,
                    #   workflow_runs, dashboard, agents
-    models/        # SQLAlchemy ORM (12 模型): connection, skill, pipeline, run,
-                   #   data_source, target, workflow, workflow_run,
+    models/        # SQLAlchemy ORM (13 模型): connection, skill, pipeline, run,
+                   #   data_source, target, workflow, workflow_run, pipeline_run,
                    #   processed_file, agent_session, agent_config, agent_message
     schemas/       # Pydantic 请求/响应 schema (12 模块):
                    #   skill, connection, pipeline, run, pipeline_runs, data_source,
@@ -267,6 +267,8 @@ GitHub Actions 在 push/PR 到 `main` 时运行:
 | 9 | UTC 时间偏移 | 后端 SQLite `func.now()` 返回 UTC 无 Z 后缀，前端解析前需追加 `Z` |
 | 10 | httpx.Client 不关闭 | TCP 连接泄露导致第二次请求间歇性失败，必须 `with` 或 `try/finally` 关闭 |
 | 11 | axios 30s 全局超时 | 长耗时 API（Skill 测试、Pipeline Debug）需显式设 `{ timeout: 300000 }`，否则前端默认 30s 放弃 |
+| 12 | Agent CLI "Not logged in" | CLI 不读 settings.json env 段，需 adapter `get_subprocess_env()` 注入到子进程环境 |
+| 13 | Agent 流式 streaming 卡死 | 必须注册 `ws.onClose()` + 120s watchdog timer 双重保护，否则 TextArea 永久 disabled |
 
 ---
 

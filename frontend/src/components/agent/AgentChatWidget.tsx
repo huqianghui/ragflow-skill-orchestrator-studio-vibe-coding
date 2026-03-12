@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Input, message, Typography } from 'antd';
+import { Button, Input, message, Tag, Typography } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import type {
   AgentInfo, Attachment, AgentContextData, ChatMessage, PipelineAction,
@@ -11,6 +11,14 @@ import ContextPanel from './ContextPanel';
 import MessageBubble from './MessageBubble';
 
 const { Text } = Typography;
+
+/** Max seconds to wait for any streaming data before auto-resetting. */
+const STREAMING_TIMEOUT_MS = 120_000;
+
+interface QueuedMessage {
+  text: string;
+  timestamp: number;
+}
 
 interface AgentChatWidgetProps {
   embedded?: boolean;
@@ -65,12 +73,41 @@ export default function AgentChatWidget({
   const [streaming, setStreaming] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([]);
+  const [queueIndex, setQueueIndex] = useState(-1);
   const wsRef = useRef(new AgentWebSocket());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const assistantContentRef = useRef('');
   const streamingRef = useRef(false);
   // Stable ID for the current assistant bubble during streaming
   const streamMsgIdRef = useRef('');
+  // Streaming watchdog timer
+  const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Streaming safety: reset streaming state with cleanup
+  // ---------------------------------------------------------------------------
+  const resetStreaming = useCallback(() => {
+    streamingRef.current = false;
+    setStreaming(false);
+    assistantContentRef.current = '';
+    streamMsgIdRef.current = '';
+    if (streamingTimerRef.current) {
+      clearTimeout(streamingTimerRef.current);
+      streamingTimerRef.current = null;
+    }
+  }, []);
+
+  /** Restart the watchdog timer — called on every incoming streaming event. */
+  const resetStreamingWatchdog = useCallback(() => {
+    if (streamingTimerRef.current) clearTimeout(streamingTimerRef.current);
+    streamingTimerRef.current = setTimeout(() => {
+      if (streamingRef.current) {
+        resetStreaming();
+        message.warning('Agent response timed out');
+      }
+    }, STREAMING_TIMEOUT_MS);
+  }, [resetStreaming]);
 
   // Load agents only in embedded mode
   useEffect(() => {
@@ -94,10 +131,7 @@ export default function AgentChatWidget({
     const ws = wsRef.current;
     ws.onEvent((event) => {
       if (event.type === 'done') {
-        streamingRef.current = false;
-        setStreaming(false);
-        assistantContentRef.current = '';
-        streamMsgIdRef.current = '';
+        resetStreaming();
         return;
       }
       if (event.type === 'error') {
@@ -107,14 +141,14 @@ export default function AgentChatWidget({
           content: `**Error:** ${event.content}`,
           timestamp: Date.now(),
         }]);
-        streamingRef.current = false;
-        setStreaming(false);
-        assistantContentRef.current = '';
-        streamMsgIdRef.current = '';
+        resetStreaming();
         return;
       }
       // Skip non-text events (session_init, system, etc.)
       if (!event.content) return;
+
+      // Reset watchdog on every data chunk
+      resetStreamingWatchdog();
 
       // Accumulate text chunk
       assistantContentRef.current += event.content;
@@ -140,11 +174,19 @@ export default function AgentChatWidget({
     });
     ws.onError(() => {
       message.error('WebSocket connection error');
-      streamingRef.current = false;
-      setStreaming(false);
+      resetStreaming();
     });
-    return () => { ws.disconnect(); };
-  }, []);
+    // Register onClose to reset streaming when WS closes after reconnect exhaustion
+    ws.onClose(() => {
+      if (streamingRef.current) {
+        resetStreaming();
+      }
+    });
+    return () => {
+      ws.disconnect();
+      if (streamingTimerRef.current) clearTimeout(streamingTimerRef.current);
+    };
+  }, [resetStreaming, resetStreamingWatchdog]);
 
   // Reset session when agent changes
   const prevAgentRef = useRef(selectedAgent);
@@ -153,12 +195,12 @@ export default function AgentChatWidget({
       wsRef.current.disconnect();
       setMessages([]);
       setCurrentSessionId(null);
-      assistantContentRef.current = '';
-      streamingRef.current = false;
-      setStreaming(false);
+      resetStreaming();
+      setMessageQueue([]);
+      setQueueIndex(-1);
     }
     prevAgentRef.current = selectedAgent;
-  }, [selectedAgent]);
+  }, [selectedAgent, resetStreaming]);
 
   // Playground mode: handle sessionId changes (e.g. from History navigation)
   useEffect(() => {
@@ -223,15 +265,13 @@ export default function AgentChatWidget({
     return null;
   }, [autoContext, attachments]);
 
-  const handleSend = async () => {
-    const text = inputValue.trim();
-    if (!text || streaming) return;
-    if (!selectedAgent) {
-      message.warning('Please select an agent');
-      return;
-    }
+  // ---------------------------------------------------------------------------
+  // Core send logic — shared by direct send and queue drain
+  // ---------------------------------------------------------------------------
+  const doSend = useCallback(async (text: string) => {
+    if (!selectedAgent) return;
 
-    // 1. Add user message
+    // Add user message bubble
     setMessages(prev => [...prev, {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -239,7 +279,7 @@ export default function AgentChatWidget({
       timestamp: Date.now(),
     }]);
 
-    // 2. Add empty assistant bubble (streaming placeholder)
+    // Add empty assistant bubble (streaming placeholder)
     const assistantMsgId = `assistant-${Date.now()}`;
     streamMsgIdRef.current = assistantMsgId;
     setMessages(prev => [...prev, {
@@ -249,10 +289,10 @@ export default function AgentChatWidget({
       timestamp: Date.now(),
     }]);
 
-    setInputValue('');
     streamingRef.current = true;
     setStreaming(true);
     assistantContentRef.current = '';
+    resetStreamingWatchdog();
 
     const source = embedded
       ? (autoContext?.type === 'pipeline' ? 'pipeline-editor' : 'skill-editor')
@@ -268,7 +308,7 @@ export default function AgentChatWidget({
         if (!embedded) onSessionCreated?.(session.id);
       } catch {
         message.error('Failed to create session');
-        setStreaming(false);
+        resetStreaming();
         return;
       }
     }
@@ -289,7 +329,7 @@ export default function AgentChatWidget({
         await waitForOpen();
       } catch {
         message.error('WebSocket connection timeout');
-        setStreaming(false);
+        resetStreaming();
         return;
       }
     }
@@ -300,7 +340,82 @@ export default function AgentChatWidget({
       mode: selectedMode,
       context: buildContext(),
     });
-  };
+  }, [
+    selectedAgent, selectedMode, embedded, autoContext, currentSessionId,
+    sessionId, onSessionCreated, buildContext, resetStreaming, resetStreamingWatchdog,
+  ]);
+
+  // ---------------------------------------------------------------------------
+  // Queue drain: when streaming stops, auto-send the next queued message
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!streaming && messageQueue.length > 0) {
+      const [next, ...rest] = messageQueue;
+      setMessageQueue(rest);
+      setQueueIndex(-1);
+      doSend(next.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
+
+  // ---------------------------------------------------------------------------
+  // handleSend: either send directly or enqueue
+  // ---------------------------------------------------------------------------
+  const handleSend = useCallback(() => {
+    const text = inputValue.trim();
+    if (!text) return;
+    if (!selectedAgent) {
+      message.warning('Please select an agent');
+      return;
+    }
+
+    setInputValue('');
+    setQueueIndex(-1);
+
+    if (streaming) {
+      // Enqueue: add to message queue, show as pending in chat
+      setMessageQueue(prev => [...prev, { text, timestamp: Date.now() }]);
+    } else {
+      // Send directly
+      doSend(text);
+    }
+  }, [inputValue, selectedAgent, streaming, doSend]);
+
+  // ---------------------------------------------------------------------------
+  // Arrow key navigation for queued messages
+  // ---------------------------------------------------------------------------
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter without Shift = send
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+
+    // Arrow Up/Down only when cursor is at start/end and queue is non-empty
+    if (messageQueue.length === 0) return;
+
+    const textarea = e.currentTarget;
+    const atStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+    const atEnd = textarea.selectionStart === textarea.value.length;
+
+    if (e.key === 'ArrowUp' && atStart) {
+      e.preventDefault();
+      const newIdx = queueIndex < messageQueue.length - 1 ? queueIndex + 1 : queueIndex;
+      setQueueIndex(newIdx);
+      setInputValue(messageQueue[messageQueue.length - 1 - newIdx].text);
+    } else if (e.key === 'ArrowDown' && atEnd) {
+      e.preventDefault();
+      if (queueIndex > 0) {
+        const newIdx = queueIndex - 1;
+        setQueueIndex(newIdx);
+        setInputValue(messageQueue[messageQueue.length - 1 - newIdx].text);
+      } else if (queueIndex === 0) {
+        setQueueIndex(-1);
+        setInputValue('');
+      }
+    }
+  }, [handleSend, messageQueue, queueIndex]);
 
   const handleApplyCode = useCallback((code: string) => {
     if (onApplyCode) {
@@ -378,6 +493,29 @@ export default function AgentChatWidget({
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Queued messages indicator */}
+        {messageQueue.length > 0 && (
+          <div style={{
+            padding: '4px 0',
+            display: 'flex',
+            gap: 4,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>Queued:</Text>
+            {messageQueue.map((q, i) => (
+              <Tag
+                key={q.timestamp}
+                closable
+                onClose={() => setMessageQueue(prev => prev.filter((_, idx) => idx !== i))}
+                style={{ fontSize: 11, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text}
+              </Tag>
+            ))}
+          </div>
+        )}
+
         {/* Input */}
         <div style={{
           padding: '8px 0',
@@ -385,27 +523,29 @@ export default function AgentChatWidget({
         }}>
           <Input.TextArea
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onPressEnter={(e) => {
-              if (!e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Type your message..."
+            onChange={(e) => { setInputValue(e.target.value); setQueueIndex(-1); }}
+            onKeyDown={handleKeyDown}
+            placeholder={streaming ? 'Type to queue next message...' : 'Type your message...'}
             autoSize={{ minRows: embedded ? 2 : 3, maxRows: 6 }}
-            disabled={streaming || noAvailableAgents}
+            disabled={noAvailableAgents}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, gap: 8, alignItems: 'center' }}>
+            {streaming && (
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                {messageQueue.length > 0
+                  ? `${messageQueue.length} queued`
+                  : 'Agent responding...'}
+              </Text>
+            )}
             <Button
               type="primary"
               icon={<SendOutlined />}
               onClick={handleSend}
-              loading={streaming}
+              loading={streaming && messageQueue.length === 0 && !inputValue.trim()}
               disabled={!inputValue.trim() || noAvailableAgents}
               size={embedded ? 'small' : 'middle'}
             >
-              Send
+              {streaming ? 'Queue' : 'Send'}
             </Button>
           </div>
         </div>
